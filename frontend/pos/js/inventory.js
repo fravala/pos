@@ -343,30 +343,32 @@ function renderInventoryList() {
   products.forEach((p) => {
     const trend = productCostTrend(p.id);
     const row = document.createElement('div');
-    row.className = 'bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex items-center gap-4';
+    row.className = 'bg-white rounded-xl p-4 border border-slate-200 shadow-sm flex flex-wrap sm:flex-nowrap items-center gap-4';
     row.innerHTML = `
       ${p.image_url
         ? `<img src="${p.image_url}" class="w-16 h-16 rounded-lg object-cover shrink-0">`
         : `<div class="w-16 h-16 rounded-lg bg-slate-100 shrink-0"></div>`}
-      <div class="flex-1 min-w-0">
+      <div class="flex-1 min-w-[140px]">
         <div class="flex items-center gap-2">
           <h3 class="font-bold text-slate-800 truncate">${p.name}</h3>
-          ${!p.active ? `<span class="text-[10px] font-bold uppercase bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full">Inactivo</span>` : ''}
+          ${!p.active ? `<span class="text-[10px] font-bold uppercase bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full shrink-0">Inactivo</span>` : ''}
         </div>
         <p class="text-sm text-slate-400">${p.category || 'Sin categoría'}</p>
         ${renderCostBadge(p, trend)}
       </div>
-      <span class="font-black text-primary shrink-0">${price(p.base_price)}</span>
-      <div class="flex items-center gap-1 shrink-0">
-        <button class="btn-recipe p-2 rounded-lg text-slate-400 hover:bg-secondary/10 hover:text-secondary transition-colors" title="Escandallo">
-          <span class="material-symbols-outlined text-lg">receipt_long</span>
-        </button>
-        <button class="btn-edit p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors">
-          <span class="material-symbols-outlined text-lg">edit</span>
-        </button>
-        <button class="btn-delete p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
-          <span class="material-symbols-outlined text-lg">delete</span>
-        </button>
+      <div class="flex items-center justify-between gap-2 w-full sm:w-auto shrink-0">
+        <span class="font-black text-primary shrink-0">${price(p.base_price)}</span>
+        <div class="flex items-center gap-1 shrink-0">
+          <button class="btn-recipe p-2 rounded-lg text-slate-400 hover:bg-secondary/10 hover:text-secondary transition-colors" title="Escandallo">
+            <span class="material-symbols-outlined text-lg">receipt_long</span>
+          </button>
+          <button class="btn-edit p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors">
+            <span class="material-symbols-outlined text-lg">edit</span>
+          </button>
+          <button class="btn-delete p-2 rounded-lg text-slate-400 hover:bg-red-50 hover:text-red-500 transition-colors">
+            <span class="material-symbols-outlined text-lg">delete</span>
+          </button>
+        </div>
       </div>`;
     row.querySelector('.btn-edit').addEventListener('click', () => openProductModal(p));
     row.querySelector('.btn-delete').addEventListener('click', () => deleteProduct(p));
@@ -393,7 +395,7 @@ function renderCostBadge(product, trend) {
   }
 
   return `
-    <div class="flex items-center gap-3 mt-1 text-xs">
+    <div class="flex flex-wrap items-center gap-x-3 gap-y-0.5 mt-1 text-xs">
       <span class="text-slate-500">Costo: <strong class="text-slate-700">${money(cost)}</strong></span>
       <span class="${marginTone} font-semibold">${marginPct.toFixed(0)}% margen</span>
       ${trendHtml}

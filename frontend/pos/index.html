@@ -173,23 +173,23 @@
 <div id="app" class="hidden h-screen flex flex-col">
 
   <!-- Top bar -->
-  <header class="h-16 bg-white text-primary flex items-center gap-4 px-6 shrink-0 border-b border-slate-200 shadow-sm z-10">
-    <div class="flex items-center gap-3 shrink-0">
-      <button id="btn-nav-toggle" class="admin-only hidden text-primary text-xl leading-none">☰</button>
-      <span class="font-headline font-black text-lg" id="location-name">—</span>
+  <header class="h-16 bg-white text-primary flex items-center gap-2 sm:gap-4 px-3 sm:px-6 shrink-0 border-b border-slate-200 shadow-sm z-10">
+    <div class="flex items-center gap-2 sm:gap-3 shrink-0">
+      <button id="btn-nav-toggle" class="admin-only hidden sm:hidden text-primary text-2xl leading-none w-8">☰</button>
+      <span class="font-headline font-black text-lg hidden sm:block" id="location-name">—</span>
     </div>
-    <div class="flex-1 max-w-xl relative group">
+    <div class="flex-1 max-w-xl relative group min-w-0">
       <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary">search</span>
-      <input id="product-search" type="search" placeholder="Buscar producto, SKU o categoría..."
+      <input id="product-search" type="search" placeholder="Buscar producto..."
         class="w-full h-10 pl-10 pr-4 rounded-lg text-sm text-slate-800 bg-gray-50 placeholder:text-gray-400 border-none focus:outline-none focus:ring-2 focus:ring-secondary/50">
     </div>
-    <div class="flex items-center gap-2 text-sm shrink-0">
+    <div class="flex items-center gap-1.5 sm:gap-2 text-sm shrink-0">
       <span class="hidden md:flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-slate-200">
         <span class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary" id="user-avatar">?</span>
         <span class="text-slate-700 font-medium" id="user-label"></span>
       </span>
-      <button id="btn-close-session" class="rounded-lg px-3 py-2 text-xs font-semibold border-2 border-slate-200 text-slate-600 hover:bg-slate-50">Corte Z</button>
-      <button id="btn-logout" class="rounded-lg px-3 py-2 text-xs font-semibold bg-slate-800 text-white hover:bg-slate-900">Salir</button>
+      <button id="btn-close-session" class="rounded-lg px-2 sm:px-3 py-2 text-xs font-semibold border-2 border-slate-200 text-slate-600 hover:bg-slate-50 whitespace-nowrap">Corte Z</button>
+      <button id="btn-logout" class="rounded-lg px-2 sm:px-3 py-2 text-xs font-semibold bg-slate-800 text-white hover:bg-slate-900 whitespace-nowrap">Salir</button>
     </div>
   </header>
 
@@ -207,9 +207,11 @@
     </div>
   </div>
 
-  <div class="flex-1 flex overflow-hidden">
-  <!-- Side nav (ADMIN only) -->
-  <nav id="side-nav" class="hidden admin-only shrink-0 bg-white border-r border-slate-200 w-20 flex-col items-center py-4 gap-6 overflow-y-auto">
+  <div class="flex-1 flex overflow-hidden relative">
+  <!-- Backdrop del drawer de navegación (solo mobile) -->
+  <div id="nav-backdrop" class="hidden sm:hidden fixed inset-0 bg-black/40 z-20"></div>
+  <!-- Side nav (ADMIN only). En mobile es un drawer que se abre con el botón ☰; en sm+ va fijo en el layout. -->
+  <nav id="side-nav" class="hidden admin-only shrink-0 bg-white border-r border-slate-200 w-20 flex-col items-center py-4 gap-6 overflow-y-auto fixed sm:static inset-y-0 left-0 z-30 -translate-x-full sm:translate-x-0 transition-transform duration-200">
     <button data-view="caja" title="Caja" class="nav-btn group flex flex-col items-center gap-1 w-full py-2 bg-primary/10 text-primary border-r-4 border-primary">
       <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">point_of_sale</span>
       <span class="text-[10px] font-bold uppercase tracking-wider">Caja</span>
@@ -272,7 +274,7 @@
   <!-- Inventario / Productos (ADMIN) -->
   <div id="view-inventory" class="hidden flex-1 overflow-y-auto p-6 bg-[#F7F8FA]">
     <div class="max-w-4xl mx-auto">
-      <div class="flex justify-between items-center mb-4">
+      <div class="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-3 mb-4">
         <div class="flex gap-2 flex-wrap">
           <button id="tab-dashboard" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider font-bold bg-primary text-white shadow-md shadow-primary/20">Ventas</button>
           <button id="tab-products" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider bg-white text-neutral-500 border border-neutral-200">Productos</button>

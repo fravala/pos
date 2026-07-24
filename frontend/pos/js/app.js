@@ -176,10 +176,29 @@ function applyRoleUi() {
 }
 
 // ============================================================
+// DRAWER de navegación (mobile) — el sidebar se abre/cierra con ☰
+// ============================================================
+function openNavDrawer() {
+  el('side-nav').classList.remove('-translate-x-full');
+  el('side-nav').classList.add('translate-x-0');
+  el('nav-backdrop').classList.remove('hidden');
+  el('nav-backdrop').classList.add('block');
+}
+function closeNavDrawer() {
+  el('side-nav').classList.add('-translate-x-full');
+  el('side-nav').classList.remove('translate-x-0');
+  el('nav-backdrop').classList.add('hidden');
+  el('nav-backdrop').classList.remove('block');
+}
+el('btn-nav-toggle')?.addEventListener('click', openNavDrawer);
+el('nav-backdrop')?.addEventListener('click', closeNavDrawer);
+
+// ============================================================
 // NAV — cambio de vista (Caja / KDS / Inventario / Configuración)
 // ============================================================
 document.querySelectorAll('.nav-btn').forEach((btn) => {
   btn.addEventListener('click', async () => {
+    closeNavDrawer();
     document.querySelectorAll('.nav-btn').forEach((b) => {
       b.classList.remove('bg-primary/10', 'text-primary', 'border-r-4', 'border-primary');
       b.classList.add('text-gray-400');
