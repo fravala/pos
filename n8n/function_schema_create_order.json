@@ -1,0 +1,61 @@
+{
+  "name": "create_order",
+  "description": "Crea un pedido en el POS a partir de la conversación de WhatsApp con el cliente. Usa esta función únicamente cuando el cliente ya confirmó todos los productos, cantidades y modificaciones (ingredientes a quitar o extras a agregar) de su pedido.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "location_id": {
+        "type": "string",
+        "format": "uuid",
+        "description": "ID de la sucursal (locations.id) asociada al número de WhatsApp que recibió el mensaje. Se resuelve por bot_instances.phone_number antes de llamar a esta función, nunca lo adivines ni se lo preguntes al cliente."
+      },
+      "items": {
+        "type": "array",
+        "description": "Lista de productos que el cliente quiere ordenar.",
+        "items": {
+          "type": "object",
+          "properties": {
+            "product_id": {
+              "type": "string",
+              "format": "uuid",
+              "description": "ID del producto (products.id) tal como aparece en el catálogo de la sucursal."
+            },
+            "quantity": {
+              "type": "integer",
+              "minimum": 1,
+              "description": "Cantidad de unidades de este producto."
+            },
+            "removed_ingredients": {
+              "type": "array",
+              "items": { "type": "string", "format": "uuid" },
+              "description": "IDs de ingredientes base (inventory_catalog.id) que el cliente pidió quitar, ej. ['sin cebolla']. Vacío si no pidió quitar nada."
+            },
+            "added_extras": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "ingredient_id": { "type": "string", "format": "uuid", "description": "ID del ingrediente extra (inventory_catalog.id)." },
+                  "qty": { "type": "integer", "minimum": 1, "description": "Cantidad de este extra." }
+                },
+                "required": ["ingredient_id", "qty"]
+              },
+              "description": "Extras agregados por el cliente. Vacío si no pidió extras."
+            }
+          },
+          "required": ["product_id", "quantity"]
+        }
+      },
+      "customer_phone": {
+        "type": "string",
+        "description": "Número de WhatsApp del cliente que hace el pedido, en formato E.164."
+      },
+      "payment_method": {
+        "type": "string",
+        "enum": ["CASH", "TRANSFER"],
+        "description": "Método de pago que el cliente indicó: efectivo o transferencia."
+      }
+    },
+    "required": ["location_id", "items", "customer_phone", "payment_method"]
+  }
+}

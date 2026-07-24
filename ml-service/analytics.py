@@ -1,0 +1,143 @@
+"""
+Inteligencia de negocio semanal:
+1. K-Means sobre revenue/margin por producto -> Matriz ABC de rentabilidad.
+2. Apriori sobre canastas de la semana -> cross_selling_combos.
+Guarda resultado en weekly_sales_analytics (una fila por location/week_start).
+"""
+import json
+import logging
+from datetime import date, timedelta
+import pandas as pd
+from sklearn.cluster import KMeans
+from mlxtend.frequent_patterns import apriori, association_rules
+from mlxtend.preprocessing import TransactionEncoder
+from db import fetch_df, execute
+
+logger = logging.getLogger("analytics")
+
+
+def _week_start(d: date) -> date:
+    return d - timedelta(days=d.weekday())
+
+
+def _compute_abc_matrix(location_id: str, week_start: date, week_end: date) -> list[dict]:
+    sales = fetch_df(
+        """
+        select p.id as product_id, p.name as product_name,
+               sum(oi.quantity * oi.unit_price) as revenue,
+               sum(oi.quantity * oi.unit_price) - coalesce(sum(oi.quantity * vc.total_cost), 0) as margin
+        from order_items oi
+        join orders o on o.id = oi.order_id
+        join products p on p.id = oi.product_id
+        left join view_product_costs vc on vc.product_id = p.id
+        where o.location_id = %s and o.created_at >= %s and o.created_at < %s and o.status = 'PAID'
+        group by p.id, p.name
+        """,
+        (location_id, week_start, week_end),
+    )
+
+    if sales.empty:
+        return []
+
+    features = sales[["revenue", "margin"]].fillna(0)
+    n_clusters = min(3, len(sales))
+    kmeans = KMeans(n_clusters=n_clusters, n_init=10, random_state=42)
+    sales["cluster"] = kmeans.fit_predict(features)
+
+    # Ordena clusters por revenue promedio descendente -> A (mejor), B, C (peor)
+    cluster_rank = (
+        sales.groupby("cluster")["revenue"].mean().sort_values(ascending=False).index.tolist()
+    )
+    label_map = {cluster_rank[i]: label for i, label in enumerate(["A", "B", "C"][:n_clusters])}
+    sales["class"] = sales["cluster"].map(label_map)
+
+    return [
+        {
+            "product_id": row["product_id"],
+            "product_name": row["product_name"],
+            "class": row["class"],
+            "revenue": float(row["revenue"]),
+            "margin": float(row["margin"]),
+        }
+        for _, row in sales.iterrows()
+    ]
+
+
+def _compute_cross_selling_combos(location_id: str, week_start: date, week_end: date) -> list[dict]:
+    baskets = fetch_df(
+        """
+        select o.id as order_id, oi.product_id
+        from order_items oi
+        join orders o on o.id = oi.order_id
+        where o.location_id = %s and o.created_at >= %s and o.created_at < %s and o.status = 'PAID'
+        """,
+        (location_id, week_start, week_end),
+    )
+
+    if baskets.empty:
+        return []
+
+    grouped = baskets.groupby("order_id")["product_id"].apply(list).tolist()
+    grouped = [list(set(items)) for items in grouped if len(set(items)) > 1]
+
+    if len(grouped) < 3:
+        return []
+
+    encoder = TransactionEncoder()
+    encoded = encoder.fit(grouped).transform(grouped)
+    df_encoded = pd.DataFrame(encoded, columns=encoder.columns_)
+
+    frequent = apriori(df_encoded, min_support=0.02, use_colnames=True)
+    if frequent.empty:
+        return []
+
+    rules = association_rules(frequent, metric="lift", min_threshold=1.0)
+    rules = rules.sort_values("lift", ascending=False).head(20)
+
+    combos = []
+    for _, rule in rules.iterrows():
+        combos.append({
+            "items": list(rule["antecedents"]) + list(rule["consequents"]),
+            "support": float(rule["support"]),
+            "confidence": float(rule["confidence"]),
+            "lift": float(rule["lift"]),
+        })
+    return combos
+
+
+def run_weekly_analytics(location_id: str | None = None):
+    """Genera Matriz ABC + combos de cross-selling para la semana pasada."""
+    today = date.today()
+    week_end = _week_start(today)          # inicio de semana actual = fin de la semana pasada
+    week_start = week_end - timedelta(days=7)
+
+    locations_query = "select id, tenant_id from locations"
+    params = ()
+    if location_id:
+        locations_query += " where id = %s"
+        params = (location_id,)
+    locations = fetch_df(locations_query, params)
+
+    processed = 0
+    for _, loc in locations.iterrows():
+        loc_id, tenant_id = loc["id"], loc["tenant_id"]
+
+        abc_matrix = _compute_abc_matrix(loc_id, week_start, week_end)
+        combos = _compute_cross_selling_combos(loc_id, week_start, week_end)
+
+        execute(
+            """
+            insert into weekly_sales_analytics
+                (tenant_id, location_id, week_start, abc_matrix, cross_selling_combos)
+            values (%s, %s, %s, %s::jsonb, %s::jsonb)
+            on conflict (location_id, week_start)
+            do update set abc_matrix = excluded.abc_matrix,
+                          cross_selling_combos = excluded.cross_selling_combos,
+                          generated_at = now()
+            """,
+            (tenant_id, loc_id, week_start, json.dumps(abc_matrix), json.dumps(combos)),
+        )
+        processed += 1
+
+    logger.info(f"Analytics semanal completado para {processed} locations")
+    return {"locations_processed": processed, "week_start": str(week_start)}

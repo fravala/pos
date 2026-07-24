@@ -1,0 +1,702 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>POS</title>
+<base href="/pos/">
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@500;700;800&family=Inter:wght@400;500;600&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { primary: '#FF6B35', secondary: '#2EC4B6' },
+    fontFamily: { headline: ['Plus Jakarta Sans','sans-serif'], body: ['Inter','sans-serif'] }
+  } } };
+</script>
+<style>
+  html, body { overscroll-behavior: none; -webkit-tap-highlight-color: transparent; }
+  ::-webkit-scrollbar { width: 8px; height: 8px; }
+  ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; font-size: 22px; line-height: 1; }
+  .hide-scrollbar::-webkit-scrollbar { display: none; }
+  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  @media print {
+    body * { visibility: hidden; }
+    .print-view, .print-view * { visibility: visible; }
+    .print-view { position: absolute; top: 0; left: 0; width: 100%; display: block !important; }
+  }
+</style>
+</head>
+<body class="bg-[#F7F8FA] h-screen overflow-hidden text-slate-800 font-body">
+
+<!-- ==================== LOGIN SCREEN ==================== -->
+<div id="screen-login" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-100">
+  <form id="form-login" class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8 space-y-4">
+    <h1 class="text-2xl font-bold text-primary text-center">POS</h1>
+    <input id="login-username" type="text" placeholder="Usuario" autocomplete="username"
+      class="w-full h-14 px-4 text-lg rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+    <input id="login-password" type="password" placeholder="Contraseña" autocomplete="current-password"
+      class="w-full h-14 px-4 text-lg rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+    <p id="login-error" class="text-red-500 text-sm hidden"></p>
+    <button type="submit" class="w-full h-14 rounded-xl bg-primary text-white text-lg font-semibold active:bg-orange-700">
+      Entrar
+    </button>
+  </form>
+</div>
+
+<!-- ==================== OPEN CASH SESSION MODAL ==================== -->
+<div id="screen-open-session" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-8 space-y-4">
+    <h2 class="text-xl font-bold">Abrir turno</h2>
+    <p class="text-sm text-slate-500">Declara el fondo de caja inicial para comenzar a vender.</p>
+    <input id="opening-balance" type="number" step="0.01" min="0" placeholder="Fondo inicial $"
+      class="w-full h-14 px-4 text-lg rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+    <button id="btn-open-session" class="w-full h-14 rounded-xl bg-emerald-500 text-white text-lg font-semibold active:bg-emerald-600">
+      Abrir caja
+    </button>
+  </div>
+</div>
+
+<!-- ==================== MAIN APP ==================== -->
+<div id="app" class="hidden h-screen flex flex-col">
+
+  <!-- Top bar -->
+  <header class="h-16 bg-white text-primary flex items-center gap-4 px-6 shrink-0 border-b border-slate-200 shadow-sm z-10">
+    <div class="flex items-center gap-3 shrink-0">
+      <button id="btn-nav-toggle" class="admin-only hidden text-primary text-xl leading-none">☰</button>
+      <span class="font-headline font-black text-lg" id="location-name">—</span>
+    </div>
+    <div class="flex-1 max-w-xl relative group">
+      <span class="material-symbols-outlined absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 group-focus-within:text-primary">search</span>
+      <input id="product-search" type="search" placeholder="Buscar producto, SKU o categoría..."
+        class="w-full h-10 pl-10 pr-4 rounded-lg text-sm text-slate-800 bg-gray-50 placeholder:text-gray-400 border-none focus:outline-none focus:ring-2 focus:ring-secondary/50">
+    </div>
+    <div class="flex items-center gap-2 text-sm shrink-0">
+      <span class="hidden md:flex items-center gap-2 pl-1 pr-3 py-1 rounded-full border border-slate-200">
+        <span class="w-7 h-7 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary" id="user-avatar">?</span>
+        <span class="text-slate-700 font-medium" id="user-label"></span>
+      </span>
+      <button id="btn-close-session" class="rounded-lg px-3 py-2 text-xs font-semibold border-2 border-slate-200 text-slate-600 hover:bg-slate-50">Corte Z</button>
+      <button id="btn-logout" class="rounded-lg px-3 py-2 text-xs font-semibold bg-slate-800 text-white hover:bg-slate-900">Salir</button>
+    </div>
+  </header>
+
+  <!-- Aviso de efectivo acumulado en caja -->
+  <div id="cash-alert-banner" class="hidden items-center justify-between gap-3 px-6 py-2.5 bg-amber-50 border-b border-amber-200 text-amber-800 text-sm shrink-0">
+    <div class="flex items-center gap-2">
+      <span class="material-symbols-outlined text-lg">warning</span>
+      <span>Tienes <strong id="cash-alert-amount">$0.00</strong> en efectivo acumulado en caja. Considera hacer un corte o retiro.</span>
+    </div>
+    <div class="flex items-center gap-2 shrink-0">
+      <button id="btn-quick-withdrawal" class="px-3 py-1.5 rounded-lg bg-white border border-amber-300 font-semibold text-xs hover:bg-amber-100">Registrar retiro</button>
+      <button id="btn-dismiss-cash-alert" class="p-1 text-amber-600 hover:text-amber-800">
+        <span class="material-symbols-outlined text-lg">close</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="flex-1 flex overflow-hidden">
+  <!-- Side nav (ADMIN only) -->
+  <nav id="side-nav" class="hidden admin-only shrink-0 bg-white border-r border-slate-200 w-20 flex-col items-center py-4 gap-6 overflow-y-auto">
+    <button data-view="caja" title="Caja" class="nav-btn group flex flex-col items-center gap-1 w-full py-2 bg-primary/10 text-primary border-r-4 border-primary">
+      <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">point_of_sale</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Caja</span>
+    </button>
+    <button data-view="kds" title="Cocina" class="nav-btn group flex flex-col items-center gap-1 w-full py-2 text-gray-400 hover:text-primary">
+      <span class="material-symbols-outlined">skillet</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Cocina</span>
+    </button>
+    <button data-view="inventory" title="Productos" class="nav-btn group flex flex-col items-center gap-1 w-full py-2 text-gray-400 hover:text-primary">
+      <span class="material-symbols-outlined">inventory_2</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Productos</span>
+    </button>
+    <button data-view="settings" title="Configuración" class="nav-btn group flex flex-col items-center gap-1 w-full py-2 text-gray-400 hover:text-primary">
+      <span class="material-symbols-outlined">settings</span>
+      <span class="text-[10px] font-bold uppercase tracking-wider">Config</span>
+    </button>
+  </nav>
+
+  <div id="view-caja" class="flex-1 flex flex-col sm:flex-row overflow-y-auto sm:overflow-hidden">
+    <!-- LEFT: product grid 70% -->
+    <main id="view-pos" class="flex flex-col overflow-hidden sm:basis-[70%] bg-[#F7F8FA]">
+      <div class="px-6 pt-4 pb-2 shrink-0 flex gap-3 overflow-x-auto hide-scrollbar" id="category-tabs"></div>
+      <div id="product-grid" class="sm:flex-1 sm:overflow-y-auto px-6 pb-6 grid gap-6 content-start" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))"></div>
+    </main>
+
+    <!-- RIGHT: ticket 30% -->
+    <aside class="bg-white border-t sm:border-t-0 sm:border-l border-slate-200 flex flex-col w-full sm:basis-[30%] sm:min-w-[320px] shadow-2xl">
+      <div class="p-6 shrink-0 border-b border-gray-100">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-headline font-extrabold text-slate-900">Ticket</h2>
+          <button id="btn-clear-ticket" class="text-red-500 text-xs font-semibold hover:underline">Vaciar</button>
+        </div>
+      </div>
+      <div id="ticket-items" class="flex-1 overflow-y-auto p-4 space-y-3"></div>
+      <div class="p-6 bg-slate-50 border-t border-gray-200 space-y-4 shrink-0">
+        <div class="space-y-2">
+          <div class="flex justify-between text-sm"><span class="text-slate-500">Subtotal</span><span id="ticket-subtotal" class="font-medium text-slate-700">$0.00</span></div>
+          <div id="ticket-discount-row" class="hidden justify-between text-sm text-success"><span>Descuento <button id="btn-remove-discount" class="text-red-400 hover:underline text-xs ml-1">quitar</button></span><span id="ticket-discount">-$0.00</span></div>
+          <div class="flex justify-between items-end pt-2 border-t border-gray-200">
+            <span class="text-slate-900 font-bold">Total</span>
+            <span id="ticket-total" class="text-3xl font-black text-slate-900 tracking-tight font-headline">$0.00</span>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <button id="btn-split-bill" class="py-3 rounded-xl border-2 border-slate-200 font-bold text-slate-600 hover:bg-white active:scale-95 transition-all">Dividir cuenta</button>
+          <button id="btn-discount" class="py-3 rounded-xl border-2 border-slate-200 font-bold text-slate-600 hover:bg-white active:scale-95 transition-all">Descuento</button>
+        </div>
+        <button id="btn-charge" class="w-full py-5 bg-primary text-white font-black text-xl rounded-xl shadow-xl shadow-primary/30 active:scale-[0.97] transition-all flex items-center justify-center gap-3 disabled:opacity-40 disabled:pointer-events-none">
+          <span class="material-symbols-outlined" style="font-variation-settings:'FILL' 1">payments</span>
+          Cobrar
+        </button>
+      </div>
+    </aside>
+  </div>
+
+  <!-- Inventario / Productos (ADMIN) -->
+  <div id="view-inventory" class="hidden flex-1 overflow-y-auto p-6 bg-[#F7F8FA]">
+    <div class="max-w-4xl mx-auto">
+      <div class="flex justify-between items-center mb-4">
+        <div class="flex gap-2 flex-wrap">
+          <button id="tab-dashboard" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider font-bold bg-primary text-white shadow-md shadow-primary/20">Ventas</button>
+          <button id="tab-products" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider bg-white text-neutral-500 border border-neutral-200">Productos</button>
+          <button id="tab-supplies" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider bg-white text-neutral-500 border border-neutral-200">Insumos</button>
+          <button id="tab-vendors" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider bg-white text-neutral-500 border border-neutral-200">Proveedores</button>
+          <button id="tab-suggestions" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider bg-white text-neutral-500 border border-neutral-200">Sugerencias</button>
+          <button id="tab-insights" class="inventory-tab px-5 py-2 rounded-full font-label text-xs uppercase tracking-wider bg-white text-neutral-500 border border-neutral-200">Insights</button>
+        </div>
+        <button id="btn-new-product" class="hidden items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-lg">add</span>
+          Nuevo producto
+        </button>
+        <button id="btn-import-csv" class="hidden items-center gap-2 bg-white border-2 border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-bold text-sm hover:bg-slate-50 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-lg">upload_file</span>
+          Importar CSV
+        </button>
+        <button id="btn-new-supply" class="hidden items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-lg">add</span>
+          Nuevo insumo
+        </button>
+        <button id="btn-new-vendor" class="hidden items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-lg">add</span>
+          Nuevo proveedor
+        </button>
+        <div id="suggestions-actions" class="hidden items-center gap-2">
+          <button id="btn-print-suggestions" class="flex items-center gap-2 bg-white border-2 border-slate-200 text-slate-600 px-4 py-2.5 rounded-xl font-bold text-sm active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-lg">print</span>
+            Imprimir
+          </button>
+          <button id="btn-whatsapp-suggestions" class="flex items-center gap-2 bg-success text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-success/20 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-lg">chat</span>
+            WhatsApp
+          </button>
+          <button id="btn-recalculate-inventory" class="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50">
+            <span class="material-symbols-outlined text-lg">refresh</span>
+            <span id="btn-recalculate-label">Recalcular</span>
+          </button>
+        </div>
+        <button id="btn-update-insights" class="hidden items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all disabled:opacity-50">
+          <span class="material-symbols-outlined text-lg">refresh</span>
+          <span id="btn-insights-label">Actualizar insights</span>
+        </button>
+      </div>
+
+      <!-- Vista imprimible (oculta en pantalla, solo aparece en @media print) -->
+      <div id="suggestions-print-view" class="print-view hidden print:block"></div>
+      <div id="inventory-dashboard-panel" class="space-y-6">
+        <div class="bg-white rounded-xl border border-slate-200 p-4 flex flex-wrap items-end gap-3">
+          <label class="block">
+            <span class="text-xs font-semibold text-slate-500">Reporte de ventas de un día</span>
+            <input id="report-date" type="date" class="block h-11 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+          </label>
+          <button id="btn-print-day-report" class="h-11 flex items-center gap-2 bg-white border-2 border-slate-200 text-slate-600 px-4 rounded-xl font-bold text-sm hover:bg-slate-50 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-lg">print</span>
+            Imprimir reporte
+          </button>
+        </div>
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-3" id="dashboard-kpis"></div>
+        <div>
+          <h3 class="font-headline font-bold text-slate-800 mb-3">Ventas por día (últimos 7 días)</h3>
+          <div id="dashboard-chart" class="bg-white rounded-xl border border-slate-200 p-4 flex items-end gap-2" style="height: 180px"></div>
+        </div>
+        <div>
+          <h3 class="font-headline font-bold text-slate-800 mb-3">Tiempo promedio de preparación en cocina (últimos 7 días)</h3>
+          <div id="prep-time-chart" class="bg-white rounded-xl border border-slate-200 p-4 flex items-end gap-2" style="height: 180px"></div>
+        </div>
+      </div>
+      <div id="inventory-products-panel" class="hidden">
+        <div id="inventory-list" class="space-y-3"></div>
+      </div>
+      <div id="inventory-supplies-panel" class="hidden">
+        <div id="supplies-list" class="space-y-3"></div>
+      </div>
+      <div id="inventory-vendors-panel" class="hidden">
+        <div id="vendors-list" class="space-y-3"></div>
+      </div>
+      <div id="inventory-suggestions-panel" class="hidden">
+        <div id="suggestions-list" class="space-y-3"></div>
+      </div>
+      <div id="inventory-insights-panel" class="hidden space-y-6">
+        <div>
+          <h3 class="font-headline font-bold text-slate-800 mb-3">Matriz ABC de rentabilidad (última semana)</h3>
+          <div id="abc-matrix-list" class="space-y-2"></div>
+        </div>
+        <div>
+          <h3 class="font-headline font-bold text-slate-800 mb-3">Combos de venta cruzada</h3>
+          <div id="cross-selling-list" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal proveedor (crear/editar vendors) -->
+  <div id="modal-vendor" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-4">
+      <h2 id="vendor-modal-title" class="text-xl font-headline font-extrabold text-slate-900">Nuevo proveedor</h2>
+      <form id="form-vendor" class="space-y-3">
+        <input type="hidden" id="vendor-id">
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Nombre</span>
+          <input id="vendor-name" type="text" required class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Teléfono</span>
+          <input id="vendor-phone" type="text" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Email</span>
+          <input id="vendor-email" type="email" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <div class="flex gap-3 pt-2">
+          <button type="button" id="btn-vendor-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+          <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal insumo (crear/editar inventory_catalog) -->
+  <div id="modal-supply" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h2 id="supply-modal-title" class="text-xl font-headline font-extrabold text-slate-900">Nuevo insumo</h2>
+      <form id="form-supply" class="space-y-3">
+        <input type="hidden" id="supply-id">
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Nombre</span>
+          <input id="supply-name" type="text" required class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Unidad de consumo (para recetas y stock)</span>
+          <select id="supply-unit" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            <option value="unit">Pieza (unit)</option>
+            <option value="kg">Kilogramo (kg)</option>
+            <option value="g">Gramo (g)</option>
+            <option value="l">Litro (l)</option>
+            <option value="ml">Mililitro (ml)</option>
+          </select>
+          <span class="text-xs text-slate-400">La cantidad que descuenta cada venta en el escandallo se mide en esta unidad.</span>
+        </label>
+
+        <div class="bg-secondary/5 border border-secondary/20 rounded-xl p-3 space-y-3">
+          <p class="text-xs font-bold text-secondary uppercase tracking-wide">Presentación de compra <span id="supply-purchase-hint" class="normal-case font-normal text-slate-400"></span></p>
+          <label class="block">
+            <span class="text-sm font-semibold text-slate-500">Cómo lo compras</span>
+            <input id="supply-purchase-label" type="text" placeholder="Ej: Bolsa 142g, Caja 24 pz" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+          </label>
+          <div class="grid grid-cols-2 gap-3">
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">Contenido <span id="supply-unit-label-1">(unit)</span></span>
+              <input id="supply-purchase-size" type="number" step="0.0001" min="0.0001" value="1" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">Costo de la presentación</span>
+              <input id="supply-purchase-cost" type="number" step="0.01" min="0" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+          </div>
+          <p class="text-sm text-slate-600">Costo por <span id="supply-unit-label-2">unit</span>: <span id="supply-computed-unit-cost" class="font-bold text-secondary">$0.00</span></p>
+          <p id="supply-purchase-warning" class="hidden text-xs text-amber-600 bg-amber-50 border border-amber-200 rounded-lg p-2">
+            Cambiar esto aquí NO afecta el costo de tu stock actual (evita descuadrar recetas ya costeadas). Usa "Registrar compra" en la lista para dar entrada a mercancía nueva con su precio real.
+          </p>
+        </div>
+
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-3">
+          <p class="text-xs font-bold text-slate-500 uppercase tracking-wide">Existencias (esta sucursal)</p>
+          <div class="grid grid-cols-[1fr_auto] gap-2 items-end">
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">Stock actual</span>
+              <input id="supply-stock-qty" type="number" step="0.0001" min="0" value="0" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+            <select id="supply-stock-unit-mode" class="h-12 px-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+              <option value="purchase">bolsas/paquetes</option>
+              <option value="base">unidad base</option>
+            </select>
+          </div>
+          <p class="text-xs text-slate-400">Equivale a <span id="supply-stock-equiv" class="font-semibold text-slate-600">0</span> <span id="supply-unit-label-3">unit</span> en el sistema.</p>
+
+          <div class="grid grid-cols-[1fr_auto] gap-2 items-end pt-2 border-t border-slate-200">
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">Avisarme cuando quede menos de</span>
+              <input id="supply-safety-qty" type="number" step="0.0001" min="0" value="0" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+            <select id="supply-safety-unit-mode" class="h-12 px-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+              <option value="purchase">bolsas/paquetes</option>
+              <option value="base">unidad base</option>
+            </select>
+          </div>
+        </div>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Modo de reabasto</span>
+          <select id="supply-restock-mode" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            <option value="SELF_PURCHASE">Compra propia</option>
+            <option value="VENDOR_ROUTE">Ruta de proveedor</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Proveedor</span>
+          <select id="supply-vendor" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            <option value="">Sin proveedor</option>
+          </select>
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Lead time compra propia (días)</span>
+          <input id="supply-lead-time" type="number" min="0" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Imagen (URL)</span>
+          <input id="supply-image" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <div class="flex gap-3 pt-2">
+          <button type="button" id="btn-supply-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+          <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal registrar compra (inventory_purchases + costo promedio ponderado) -->
+  <div id="modal-purchase" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-headline font-extrabold text-slate-900">Registrar compra: <span id="purchase-supply-name"></span></h2>
+      <p class="text-sm text-slate-500">Da entrada a mercancía nueva. El costo se pondera contra lo que ya tenías en stock.</p>
+      <form id="form-purchase" class="space-y-3">
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Presentación comprada</span>
+          <input id="purchase-label" type="text" placeholder="Ej: Bolsa 80g" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <div class="grid grid-cols-2 gap-3">
+          <label class="block">
+            <span class="text-sm font-semibold text-slate-500">Contenido <span id="purchase-unit-label">(unit)</span></span>
+            <input id="purchase-unit-size" type="number" step="0.0001" min="0.0001" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+          </label>
+          <label class="block">
+            <span class="text-sm font-semibold text-slate-500">Cantidad comprada</span>
+            <input id="purchase-qty" type="number" step="1" min="1" value="1" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+          </label>
+        </div>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Costo total pagado</span>
+          <input id="purchase-total-cost" type="number" step="0.01" min="0" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <div class="bg-slate-50 rounded-xl p-3 text-sm space-y-1">
+          <div class="flex justify-between"><span class="text-slate-500">Stock actual</span><span id="purchase-preview-old-stock" class="font-semibold">0</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Costo promedio actual</span><span id="purchase-preview-old-cost" class="font-semibold">$0.00</span></div>
+          <div class="flex justify-between pt-1 border-t border-slate-200"><span class="text-slate-500">Stock nuevo</span><span id="purchase-preview-new-stock" class="font-bold text-secondary">0</span></div>
+          <div class="flex justify-between"><span class="text-slate-500">Costo promedio nuevo</span><span id="purchase-preview-new-cost" class="font-bold text-secondary">$0.00</span></div>
+        </div>
+        <div class="flex gap-3 pt-2">
+          <button type="button" id="btn-purchase-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+          <button type="submit" class="flex-1 h-12 rounded-xl bg-secondary text-white font-bold">Registrar compra</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Modal historial de compras (inventory_purchases, editable/borrable) -->
+  <div id="modal-history" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="w-full max-w-lg bg-white rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-headline font-extrabold text-slate-900">Historial de compras: <span id="history-supply-name"></span></h2>
+      <p class="text-sm text-slate-500">Editar o borrar una compra recalcula el stock y el costo promedio desde cero, respetando el orden de todas las compras.</p>
+      <div id="history-list" class="space-y-2"></div>
+      <button type="button" id="btn-history-close" class="w-full h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Modal escandallo (recipes_bom por producto) -->
+  <div id="modal-recipe" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-headline font-extrabold text-slate-900">Escandallo: <span id="recipe-product-name"></span></h2>
+      <p class="text-sm text-slate-500">Insumos que se descuentan del inventario al vender este producto.</p>
+      <div id="recipe-list" class="space-y-2"></div>
+      <div class="flex gap-2 items-end pt-2 border-t border-slate-100">
+        <label class="block flex-1">
+          <span class="text-xs font-semibold text-slate-500">Insumo</span>
+          <select id="recipe-add-supply" class="w-full h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none"></select>
+        </label>
+        <label class="block w-24">
+          <span class="text-xs font-semibold text-slate-500">Cantidad</span>
+          <input id="recipe-add-qty" type="number" step="0.0001" min="0" class="w-full h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <button type="button" id="btn-recipe-add" class="h-11 px-4 rounded-xl bg-secondary text-white font-bold text-sm">Añadir</button>
+      </div>
+      <button type="button" id="btn-recipe-close" class="w-full h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cerrar</button>
+    </div>
+  </div>
+
+  <!-- Modal importar productos desde CSV -->
+  <div id="modal-import-csv" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="w-full max-w-2xl bg-white rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h2 class="text-xl font-headline font-extrabold text-slate-900">Importar productos desde CSV</h2>
+
+      <div id="import-step-file">
+        <p class="text-sm text-slate-500 mb-3">Sube un archivo .csv. La primera fila debe tener los nombres de columna.</p>
+        <input id="import-csv-file" type="file" accept=".csv,text/csv" class="w-full text-sm border border-slate-300 rounded-xl p-3">
+      </div>
+
+      <div id="import-step-mapping" class="hidden space-y-4">
+        <p class="text-sm text-slate-500">Indica qué columna de tu CSV corresponde a cada dato. Deja "No importar" si no aplica.</p>
+        <div id="import-mapping-fields" class="grid sm:grid-cols-2 gap-3"></div>
+
+        <div>
+          <p class="text-xs font-semibold text-slate-500 mb-2">Vista previa (primeras 5 filas)</p>
+          <div class="overflow-x-auto border border-slate-200 rounded-xl">
+            <table class="w-full text-xs">
+              <thead id="import-preview-head" class="bg-slate-50"></thead>
+              <tbody id="import-preview-body"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <p id="import-summary" class="text-sm font-semibold"></p>
+      </div>
+
+      <div class="flex gap-3 pt-2">
+        <button type="button" id="btn-import-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+        <button type="button" id="btn-import-confirm" class="hidden flex-1 h-12 rounded-xl bg-primary text-white font-bold">Importar productos</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal producto (crear/editar) -->
+  <div id="modal-product" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+    <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-4 max-h-[90vh] overflow-y-auto">
+      <h2 id="product-modal-title" class="text-xl font-headline font-extrabold text-slate-900">Nuevo producto</h2>
+      <form id="form-product" class="space-y-3">
+        <input type="hidden" id="product-id">
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Nombre</span>
+          <input id="product-name" type="text" required class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Categoría</span>
+          <input id="product-category" type="text" placeholder="Pizzas, Bebidas..." class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Precio</span>
+          <input id="product-price" type="number" step="0.01" min="0" required class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Imagen (URL)</span>
+          <input id="product-image" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Descripción</span>
+          <textarea id="product-description" rows="2" class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none"></textarea>
+        </label>
+        <label class="flex items-center gap-2">
+          <input id="product-active" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
+          <span class="text-sm font-semibold text-slate-600">Activo (visible en POS y Catálogo)</span>
+        </label>
+        <div class="flex gap-3 pt-2">
+          <button type="button" id="btn-product-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+          <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- Business Settings (ADMIN) -->
+  <div id="view-settings" class="hidden flex-1 overflow-y-auto p-6">
+    <form id="form-settings" class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-6">
+      <h2 class="text-xl font-bold">Configuración del negocio</h2>
+
+      <div class="grid sm:grid-cols-2 gap-4">
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Logo (URL)</span>
+          <input id="settings-logo-url" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">WhatsApp para pedidos</span>
+          <input id="settings-whatsapp" type="text" placeholder="+52..." class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+      </div>
+
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Descripción</span>
+        <textarea id="settings-description" rows="3" class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none"></textarea>
+      </label>
+
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Avisar cuando el efectivo en caja supere</span>
+        <input id="settings-cash-alert" type="number" step="1" min="0" placeholder="Ej: 3000" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        <span class="text-xs text-slate-400">Deja vacío para desactivar el aviso. Ayuda a que no se acumule demasiado dinero en caja entre cortes.</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <input id="settings-auto-print" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
+        <span class="text-sm font-semibold text-slate-600">Imprimir ticket automáticamente al cobrar una venta</span>
+      </label>
+
+      <label class="flex items-center gap-2">
+        <input id="settings-kds-enabled" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
+        <span class="text-sm font-semibold text-slate-600">Usar Cocina (KDS)</span>
+      </label>
+      <p class="text-xs text-slate-400 -mt-3">Apágalo si tu negocio no prepara pedidos en cocina (ej. solo vendes productos ya empacados). Las ventas se marcarán como entregadas directo, sin pasar por Pendiente/En preparación.</p>
+
+      <div class="grid sm:grid-cols-3 gap-4">
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Facebook</span>
+          <input id="settings-social-facebook" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">Instagram</span>
+          <input id="settings-social-instagram" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+        <label class="block">
+          <span class="text-sm font-semibold text-slate-500">TikTok</span>
+          <input id="settings-social-tiktok" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        </label>
+      </div>
+
+      <div>
+        <span class="text-sm font-semibold text-slate-500">Horario de atención</span>
+        <div id="settings-hours" class="mt-2 space-y-2"></div>
+      </div>
+
+      <button type="submit" class="w-full h-14 rounded-xl bg-primary text-white font-bold active:bg-orange-700">
+        Guardar configuración
+      </button>
+      <p id="settings-saved-msg" class="hidden text-emerald-600 text-sm text-center">Guardado ✓</p>
+    </form>
+
+    <!-- Usuarios y Permisos -->
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-4 mt-6">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-bold">Usuarios y permisos</h2>
+        <button id="btn-new-user" class="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-lg">person_add</span>
+          Nuevo usuario
+        </button>
+      </div>
+      <div id="users-list" class="space-y-2"></div>
+    </div>
+  </div>
+  </div>
+</div>
+
+<!-- Modal usuario (crear) -->
+<div id="modal-user" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-4">
+    <h2 class="text-xl font-headline font-extrabold text-slate-900">Nuevo usuario</h2>
+    <form id="form-user" class="space-y-3">
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Usuario</span>
+        <input id="user-username" type="text" required class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Contraseña</span>
+        <input id="user-password" type="password" required minlength="6" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+        <span class="text-xs text-slate-400">Mínimo 6 caracteres.</span>
+      </label>
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Rol</span>
+        <select id="user-role" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+          <option value="CASHIER">Cajero</option>
+          <option value="KITCHEN">Cocina</option>
+          <option value="ADMIN">Administrador</option>
+        </select>
+      </label>
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Sucursal</span>
+        <select id="user-location" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none"></select>
+      </label>
+      <p id="user-form-error" class="hidden text-red-500 text-sm"></p>
+      <div class="flex gap-3 pt-2">
+        <button type="button" id="btn-user-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+        <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Crear usuario</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal resetear contraseña -->
+<div id="modal-reset-password" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 space-y-4">
+    <h2 class="text-xl font-headline font-extrabold text-slate-900">Restablecer contraseña: <span id="reset-password-username"></span></h2>
+    <form id="form-reset-password" class="space-y-3">
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Nueva contraseña</span>
+        <input id="reset-password-new" type="password" required minlength="6" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <div class="flex gap-3 pt-2">
+        <button type="button" id="btn-reset-password-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+        <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- ==================== MODIFIERS POPUP ==================== -->
+<div id="modal-modifiers" class="fixed inset-0 z-40 hidden items-end sm:items-center justify-center bg-black/40">
+  <div class="w-full sm:max-w-md bg-white rounded-t-3xl sm:rounded-2xl shadow-lg max-h-[85vh] flex flex-col">
+    <div class="p-4 border-b border-slate-200 shrink-0">
+      <h2 id="modifiers-product-name" class="text-lg font-bold"></h2>
+    </div>
+    <div class="flex-1 overflow-y-auto p-4 space-y-4">
+      <div>
+        <h3 class="text-sm font-semibold text-slate-500 mb-2">Quitar ingredientes base</h3>
+        <div id="modifiers-remove-list" class="space-y-2"></div>
+      </div>
+      <div>
+        <h3 class="text-sm font-semibold text-slate-500 mb-2">Agregar extras</h3>
+        <div id="modifiers-extra-list" class="space-y-2"></div>
+      </div>
+    </div>
+    <div class="p-4 border-t border-slate-200 shrink-0 flex gap-3">
+      <button id="btn-modifiers-cancel" class="flex-1 h-14 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+      <button id="btn-modifiers-add" class="flex-1 h-14 rounded-xl bg-primary text-white font-semibold">Agregar</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== PAYMENT MODAL ==================== -->
+<div id="modal-payment" class="fixed inset-0 z-40 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 space-y-4">
+    <h2 class="text-xl font-bold">Cobrar <span id="payment-total"></span></h2>
+    <div class="grid grid-cols-2 gap-3">
+      <button data-method="CASH" class="payment-method-btn h-16 rounded-xl bg-slate-100 font-semibold">Efectivo</button>
+      <button data-method="TRANSFER" class="payment-method-btn h-16 rounded-xl bg-slate-100 font-semibold">Transferencia</button>
+    </div>
+    <button id="btn-confirm-payment" class="w-full h-14 rounded-xl bg-emerald-500 text-white font-bold disabled:opacity-40" disabled>
+      Confirmar
+    </button>
+  </div>
+</div>
+
+<div id="toast" class="fixed bottom-4 left-1/2 -translate-x-1/2 bg-slate-900 text-white px-4 py-2 rounded-lg text-sm hidden z-50"></div>
+
+<!-- Vista imprimible: comprobante de retiro de caja -->
+<div id="withdrawal-print-view" class="print-view hidden print:block"></div>
+
+<!-- Vista imprimible: ticket de venta -->
+<div id="sale-receipt-print-view" class="print-view hidden print:block"></div>
+
+<!-- Vista imprimible: reporte de ventas de un día -->
+<div id="day-report-print-view" class="print-view hidden print:block"></div>
+
+<script src="/env.js"></script>
+<script type="module" src="./js/app.js"></script>
+<script type="module" src="./js/settings.js"></script>
+<script type="module" src="./js/inventory.js"></script>
+<script type="module" src="./js/users.js"></script>
+</body>
+</html>

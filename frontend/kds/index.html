@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>KDS — Cocina</title>
+<script src="/env.js"></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap" rel="stylesheet">
+<script>
+  tailwind.config = { theme: { extend: {
+    colors: { primary: '#FF6B35', secondary: '#2EC4B6', success: '#2ECC71', warning: '#FFB020', error: '#E63946' },
+    fontFamily: { headline: ['Plus Jakarta Sans','sans-serif'], body: ['Inter','sans-serif'], label: ['Space Grotesk','sans-serif'] }
+  } } };
+</script>
+<style>
+  html, body { overscroll-behavior: none; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+  .filled-icon { font-variation-settings: 'FILL' 1; }
+  ::-webkit-scrollbar { width: 8px; }
+  ::-webkit-scrollbar-track { background: #09090b; }
+  ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 10px; }
+  ::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
+  .kanban-column { height: calc(100vh - 88px); }
+</style>
+</head>
+<body class="bg-[#09090b] text-zinc-100 font-body h-screen overflow-hidden flex flex-col">
+
+<header class="flex justify-between items-center px-6 py-4 w-full bg-[#18181b] shadow-sm border-b border-zinc-800 shrink-0">
+  <div class="flex items-center gap-6">
+    <div class="flex flex-col">
+      <span class="text-3xl font-headline font-black text-primary tracking-tight" id="clock">--:--</span>
+      <span class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Reloj de cocina</span>
+    </div>
+    <div class="h-8 w-px bg-zinc-800"></div>
+    <div class="flex items-center gap-2 bg-zinc-800/50 px-4 py-2 rounded-full border border-zinc-700">
+      <span class="material-symbols-outlined text-primary text-sm filled-icon">notifications</span>
+      <span class="text-sm font-bold text-zinc-200"><span id="active-count">0</span> en cocina</span>
+    </div>
+    <div class="flex items-center gap-2 bg-zinc-800/50 px-4 py-2 rounded-full border border-zinc-700">
+      <span class="material-symbols-outlined text-secondary text-sm">timer</span>
+      <span class="text-sm font-bold text-zinc-200">Promedio: <span id="avg-prep-time">--</span> min</span>
+    </div>
+  </div>
+  <div class="flex items-center gap-3">
+    <span id="sound-hint" class="flex items-center gap-1.5 text-xs text-warning font-semibold bg-warning/10 px-3 py-1.5 rounded-full">
+      <span class="material-symbols-outlined text-base">touch_app</span>
+      Toca la pantalla para activar el sonido
+    </span>
+    <button id="btn-refresh" class="p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm font-semibold">
+      <span class="material-symbols-outlined">refresh</span>
+      Actualizar
+    </button>
+  </div>
+</header>
+
+<main class="flex-1 overflow-x-auto p-4 md:p-6 bg-[#09090b]">
+  <div class="flex gap-6 h-full min-w-[1000px]">
+    <section class="flex-1 flex flex-col gap-4 kanban-column">
+      <div class="flex items-center justify-between px-2">
+        <h2 class="text-xl font-headline font-extrabold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-blue-500 animate-pulse"></span>
+          Nuevo
+        </h2>
+        <span id="count-pending" class="bg-zinc-800 text-zinc-400 text-xs font-bold px-2.5 py-1 rounded-full">0</span>
+      </div>
+      <div id="col-pending" class="flex-1 overflow-y-auto flex flex-col gap-4 pb-10"></div>
+    </section>
+    <section class="flex-1 flex flex-col gap-4 kanban-column">
+      <div class="flex items-center justify-between px-2">
+        <h2 class="text-xl font-headline font-extrabold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-warning animate-pulse"></span>
+          En preparación
+        </h2>
+        <span id="count-progress" class="bg-zinc-800 text-zinc-400 text-xs font-bold px-2.5 py-1 rounded-full">0</span>
+      </div>
+      <div id="col-progress" class="flex-1 overflow-y-auto flex flex-col gap-4 pb-10"></div>
+    </section>
+    <section class="flex-1 flex flex-col gap-4 kanban-column">
+      <div class="flex items-center justify-between px-2">
+        <h2 class="text-xl font-headline font-extrabold uppercase tracking-wider text-zinc-400 flex items-center gap-2">
+          <span class="w-3 h-3 rounded-full bg-success"></span>
+          Listo
+        </h2>
+        <span id="count-ready" class="bg-zinc-800 text-zinc-400 text-xs font-bold px-2.5 py-1 rounded-full">0</span>
+      </div>
+      <div id="col-ready" class="flex-1 overflow-y-auto flex flex-col gap-4 pb-10"></div>
+    </section>
+  </div>
+</main>
+
+<script type="module" src="./js/kds.js"></script>
+</body>
+</html>

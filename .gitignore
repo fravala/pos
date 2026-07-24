@@ -1,0 +1,14 @@
+# Secretos — nunca subir
+.env
+**/.env
+backend/php/.env
+ml-service/.env
+
+# Entornos virtuales / dependencias
+ml-service/venv/
+node_modules/
+__pycache__/
+*.pyc
+
+# Sistema
+.DS_Store
