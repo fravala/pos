@@ -53,6 +53,9 @@ function renderTenants(tenants) {
         <p class="text-xs text-slate-400">${t.location_count} ${t.location_count == 1 ? 'sucursal' : 'sucursales'} · ${t.user_count} ${t.user_count == 1 ? 'usuario' : 'usuarios'}</p>
       </div>
       <div class="flex items-center gap-1 shrink-0">
+        <button class="btn-detail p-2 rounded-lg text-slate-400 hover:bg-secondary/10 hover:text-secondary transition-colors" title="Ver detalle">
+          <span class="material-symbols-outlined text-lg">visibility</span>
+        </button>
         <button class="btn-rename p-2 rounded-lg text-slate-400 hover:bg-slate-100 hover:text-primary transition-colors" title="Renombrar">
           <span class="material-symbols-outlined text-lg">edit</span>
         </button>
@@ -61,6 +64,7 @@ function renderTenants(tenants) {
         </button>
       </div>`;
 
+    row.querySelector('.btn-detail').addEventListener('click', () => openTenantDetail(t));
     row.querySelector('.btn-rename').addEventListener('click', () => openRenameModal(t));
     row.querySelector('.btn-toggle-status').addEventListener('click', async () => {
       const newStatus = t.status === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
@@ -112,6 +116,72 @@ el('form-tenant')?.addEventListener('submit', async (e) => {
     el('tenant-form-error').textContent = err.message || 'Error al crear la empresa';
     el('tenant-form-error').classList.remove('hidden');
   }
+});
+
+// ============================================================
+// DETALLE DE EMPRESA (sucursales, usuarios, ventas)
+// ============================================================
+const roleLabel = { ADMIN: 'Administrador', CASHIER: 'Cajero', KITCHEN: 'Cocina', SUPERADMIN: 'Superadmin' };
+
+async function openTenantDetail(tenant) {
+  el('tenant-detail-name').textContent = tenant.name;
+  el('tenant-detail-sales').innerHTML = '';
+  el('tenant-detail-locations').innerHTML = '';
+  el('tenant-detail-users').innerHTML = '';
+
+  el('modal-tenant-detail').classList.remove('hidden');
+  el('modal-tenant-detail').classList.add('flex');
+
+  try {
+    const data = await phpGet(`tenants_manage.php?action=detail&tenant_id=${tenant.id}`);
+    renderTenantDetail(data);
+  } catch (err) {
+    el('tenant-detail-locations').innerHTML = `<p class="text-red-500 text-sm">${err.message || 'Error al cargar el detalle'}</p>`;
+  }
+}
+
+function renderTenantDetail(data) {
+  const s = data.sales;
+  el('tenant-detail-sales').innerHTML = `
+    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Hoy</p>
+      <p class="text-xl font-black text-slate-900">${money(s.today_total)}</p>
+      <p class="text-xs text-slate-400">${s.today_count} órdenes</p>
+    </div>
+    <div class="bg-slate-50 rounded-xl p-3 border border-slate-200">
+      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Últimos 7 días</p>
+      <p class="text-xl font-black text-slate-900">${money(s.week_total)}</p>
+      <p class="text-xs text-slate-400">${s.week_count} órdenes</p>
+    </div>`;
+
+  const locWrap = el('tenant-detail-locations');
+  if (!data.locations.length) {
+    locWrap.innerHTML = `<p class="text-sm text-slate-400">Sin sucursales.</p>`;
+  } else {
+    locWrap.innerHTML = data.locations.map((l) => `
+      <div class="bg-slate-50 rounded-lg p-3 text-sm font-semibold text-slate-700">${l.name}</div>
+    `).join('');
+  }
+
+  const usersWrap = el('tenant-detail-users');
+  if (!data.users.length) {
+    usersWrap.innerHTML = `<p class="text-sm text-slate-400">Sin usuarios.</p>`;
+  } else {
+    usersWrap.innerHTML = data.users.map((u) => `
+      <div class="bg-slate-50 rounded-lg p-3 flex items-center justify-between text-sm">
+        <span class="font-semibold text-slate-700">${u.username}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-slate-500">${roleLabel[u.role] || u.role}</span>
+          ${u.status === 'DISABLED' ? `<span class="text-[10px] font-bold uppercase bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full">Desactivado</span>` : ''}
+        </div>
+      </div>
+    `).join('');
+  }
+}
+
+el('btn-tenant-detail-close')?.addEventListener('click', () => {
+  el('modal-tenant-detail').classList.add('hidden');
+  el('modal-tenant-detail').classList.remove('flex');
 });
 
 // ============================================================

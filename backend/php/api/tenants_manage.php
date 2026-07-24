@@ -29,6 +29,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'list') {
     exit;
 }
 
+// --- Detalle de una empresa: sucursales, usuarios y ventas ---
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'detail') {
+    $tenantId = $_GET['tenant_id'] ?? null;
+    if (!$tenantId) json_error('tenant_id requerido', 422);
+
+    $tenantStmt = $pdo->prepare('select id, name, status, created_at from tenants where id = :id');
+    $tenantStmt->execute(['id' => $tenantId]);
+    $tenant = $tenantStmt->fetch();
+    if (!$tenant) json_error('Empresa no encontrada', 404);
+
+    $locStmt = $pdo->prepare('select id, name from locations where tenant_id = :id order by name asc');
+    $locStmt->execute(['id' => $tenantId]);
+    $locations = $locStmt->fetchAll();
+
+    $usersStmt = $pdo->prepare(
+        'select id, username, role, status, location_id from users where tenant_id = :id order by username asc'
+    );
+    $usersStmt->execute(['id' => $tenantId]);
+    $users = $usersStmt->fetchAll();
+
+    $salesStmt = $pdo->prepare(
+        "select
+            coalesce(sum(total) filter (where created_at >= current_date), 0) as today_total,
+            count(*) filter (where created_at >= current_date) as today_count,
+            coalesce(sum(total) filter (where created_at >= now() - interval '7 days'), 0) as week_total,
+            count(*) filter (where created_at >= now() - interval '7 days') as week_count
+         from orders
+         where tenant_id = :id and status = 'PAID'"
+    );
+    $salesStmt->execute(['id' => $tenantId]);
+    $sales = $salesStmt->fetch();
+
+    echo json_encode([
+        'tenant' => $tenant,
+        'locations' => $locations,
+        'users' => $users,
+        'sales' => $sales,
+    ]);
+    exit;
+}
+
 // --- Crear empresa nueva + primera sucursal + primer usuario ADMIN ---
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'create') {
     $input = json_input();
