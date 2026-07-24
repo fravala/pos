@@ -15,6 +15,7 @@ try {
 
 $pdo = Database::connection();
 $action = $_GET['action'] ?? '';
+$isSuperadmin = ($claims['user_role'] ?? null) === 'SUPERADMIN';
 
 // --- Listar usuarios del propio tenant ---
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'list') {
@@ -42,12 +43,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'update_role') {
         json_error('No puedes cambiar tu propio rol', 422);
     }
 
-    $stmt = $pdo->prepare(
-        'update users set role = :role
-         where id = :id and tenant_id = :tenant_id
-         returning id, username, role, status'
-    );
-    $stmt->execute(['role' => $role, 'id' => $userId, 'tenant_id' => $claims['tenant_id']]);
+    // SUPERADMIN puede actuar sobre usuarios de cualquier empresa; ADMIN solo la suya.
+    $sql = $isSuperadmin
+        ? 'update users set role = :role where id = :id returning id, username, role, status'
+        : 'update users set role = :role where id = :id and tenant_id = :tenant_id returning id, username, role, status';
+    $params = ['role' => $role, 'id' => $userId];
+    if (!$isSuperadmin) $params['tenant_id'] = $claims['tenant_id'];
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $row = $stmt->fetch();
     if (!$row) json_error('Usuario no encontrado', 404);
     echo json_encode($row);
@@ -67,12 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'toggle_status') {
         json_error('No puedes desactivar tu propia cuenta', 422);
     }
 
-    $stmt = $pdo->prepare(
-        'update users set status = :status
-         where id = :id and tenant_id = :tenant_id
-         returning id, username, role, status'
-    );
-    $stmt->execute(['status' => $status, 'id' => $userId, 'tenant_id' => $claims['tenant_id']]);
+    $sql = $isSuperadmin
+        ? 'update users set status = :status where id = :id returning id, username, role, status'
+        : 'update users set status = :status where id = :id and tenant_id = :tenant_id returning id, username, role, status';
+    $params = ['status' => $status, 'id' => $userId];
+    if (!$isSuperadmin) $params['tenant_id'] = $claims['tenant_id'];
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $row = $stmt->fetch();
     if (!$row) json_error('Usuario no encontrado', 404);
     echo json_encode($row);
@@ -89,16 +95,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'reset_password') {
         json_error('user_id y new_password (mínimo 6 caracteres) requeridos', 422);
     }
 
-    $stmt = $pdo->prepare(
-        'update users set password_hash = :password_hash
-         where id = :id and tenant_id = :tenant_id
-         returning id, username'
-    );
-    $stmt->execute([
-        'password_hash' => password_hash($newPassword, PASSWORD_BCRYPT),
-        'id' => $userId,
-        'tenant_id' => $claims['tenant_id'],
-    ]);
+    $sql = $isSuperadmin
+        ? 'update users set password_hash = :password_hash where id = :id returning id, username'
+        : 'update users set password_hash = :password_hash where id = :id and tenant_id = :tenant_id returning id, username';
+    $params = ['password_hash' => password_hash($newPassword, PASSWORD_BCRYPT), 'id' => $userId];
+    if (!$isSuperadmin) $params['tenant_id'] = $claims['tenant_id'];
+
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
     $row = $stmt->fetch();
     if (!$row) json_error('Usuario no encontrado', 404);
     echo json_encode($row);

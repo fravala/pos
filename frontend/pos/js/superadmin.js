@@ -164,20 +164,76 @@ function renderTenantDetail(data) {
   }
 
   const usersWrap = el('tenant-detail-users');
+  usersWrap.innerHTML = '';
   if (!data.users.length) {
     usersWrap.innerHTML = `<p class="text-sm text-slate-400">Sin usuarios.</p>`;
-  } else {
-    usersWrap.innerHTML = data.users.map((u) => `
-      <div class="bg-slate-50 rounded-lg p-3 flex items-center justify-between text-sm">
-        <span class="font-semibold text-slate-700">${u.username}</span>
-        <div class="flex items-center gap-2">
-          <span class="text-slate-500">${roleLabel[u.role] || u.role}</span>
-          ${u.status === 'DISABLED' ? `<span class="text-[10px] font-bold uppercase bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full">Desactivado</span>` : ''}
-        </div>
-      </div>
-    `).join('');
+    return;
   }
+
+  data.users.forEach((u) => {
+    const row = document.createElement('div');
+    row.className = 'bg-slate-50 rounded-lg p-3 flex items-center justify-between text-sm';
+    row.innerHTML = `
+      <div class="flex items-center gap-2 min-w-0">
+        <span class="font-semibold text-slate-700 truncate">${u.username}</span>
+        <span class="text-slate-500 shrink-0">${roleLabel[u.role] || u.role}</span>
+        ${u.status === 'DISABLED' ? `<span class="text-[10px] font-bold uppercase bg-slate-200 text-slate-500 px-2 py-0.5 rounded-full shrink-0">Desactivado</span>` : ''}
+      </div>
+      <div class="flex items-center gap-1 shrink-0">
+        <button class="btn-user-reset p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-primary transition-colors" title="Restablecer contraseña">
+          <span class="material-symbols-outlined text-base">lock_reset</span>
+        </button>
+        <button class="btn-user-toggle p-1.5 rounded-lg text-slate-400 hover:bg-slate-200 transition-colors ${u.status === 'DISABLED' ? 'hover:text-success' : 'hover:text-red-500'}" title="${u.status === 'DISABLED' ? 'Activar' : 'Desactivar'}">
+          <span class="material-symbols-outlined text-base">${u.status === 'DISABLED' ? 'toggle_off' : 'toggle_on'}</span>
+        </button>
+      </div>`;
+
+    row.querySelector('.btn-user-reset').addEventListener('click', () => openUserResetModal(u));
+    row.querySelector('.btn-user-toggle').addEventListener('click', async () => {
+      const newStatus = u.status === 'DISABLED' ? 'ACTIVE' : 'DISABLED';
+      if (!confirm(`¿${newStatus === 'ACTIVE' ? 'Activar' : 'Desactivar'} a "${u.username}"?`)) return;
+      try {
+        await phpPost('users_manage.php?action=toggle_status', { user_id: u.id, status: newStatus });
+        u.status = newStatus;
+        renderTenantDetail(data);
+      } catch (err) {
+        alert(err.message || 'Error al cambiar el estado');
+      }
+    });
+
+    usersWrap.appendChild(row);
+  });
 }
+
+let resetTargetUser = null;
+
+function openUserResetModal(user) {
+  resetTargetUser = user;
+  el('tenant-user-reset-username').textContent = user.username;
+  el('form-tenant-user-reset').reset();
+  el('modal-tenant-user-reset').classList.remove('hidden');
+  el('modal-tenant-user-reset').classList.add('flex');
+}
+
+el('btn-tenant-user-reset-cancel')?.addEventListener('click', () => {
+  el('modal-tenant-user-reset').classList.add('hidden');
+  el('modal-tenant-user-reset').classList.remove('flex');
+});
+
+el('form-tenant-user-reset')?.addEventListener('submit', async (e) => {
+  e.preventDefault();
+  try {
+    await phpPost('users_manage.php?action=reset_password', {
+      user_id: resetTargetUser.id,
+      new_password: el('tenant-user-reset-new').value,
+    });
+    el('modal-tenant-user-reset').classList.add('hidden');
+    el('modal-tenant-user-reset').classList.remove('flex');
+    alert(`Contraseña de "${resetTargetUser.username}" actualizada.`);
+  } catch (err) {
+    alert(err.message || 'Error al restablecer la contraseña');
+  }
+});
 
 el('btn-tenant-detail-close')?.addEventListener('click', () => {
   el('modal-tenant-detail').classList.add('hidden');

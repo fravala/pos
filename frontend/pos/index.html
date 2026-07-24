@@ -149,6 +149,23 @@
   </div>
 </div>
 
+<!-- Modal resetear contraseña (desde Panel de Plataforma) -->
+<div id="modal-tenant-user-reset" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 space-y-4">
+    <h2 class="text-xl font-headline font-extrabold text-slate-900">Restablecer contraseña: <span id="tenant-user-reset-username"></span></h2>
+    <form id="form-tenant-user-reset" class="space-y-3">
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Nueva contraseña</span>
+        <input id="tenant-user-reset-new" type="password" required minlength="6" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <div class="flex gap-3 pt-2">
+        <button type="button" id="btn-tenant-user-reset-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+        <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ==================== MAIN APP ==================== -->
 <div id="app" class="hidden h-screen flex flex-col">
 
