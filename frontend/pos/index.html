@@ -53,6 +53,9 @@
     <button id="btn-open-session" class="w-full h-14 rounded-xl bg-emerald-500 text-white text-lg font-semibold active:bg-emerald-600">
       Abrir caja
     </button>
+    <button id="btn-cancel-open-session" class="w-full h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">
+      Cancelar
+    </button>
   </div>
 </div>
 
@@ -249,6 +252,10 @@
             <span class="text-slate-900 font-bold">Total</span>
             <span id="ticket-total" class="text-3xl font-black text-slate-900 tracking-tight font-headline">$0.00</span>
           </div>
+        </div>
+        <div id="no-session-banner" class="hidden items-center justify-between gap-2 bg-amber-50 border border-amber-200 text-amber-800 rounded-xl px-4 py-3 text-sm">
+          <span class="font-semibold">Turno cerrado — no puedes cobrar todavía</span>
+          <button id="btn-open-session-inline" class="shrink-0 px-3 py-1.5 rounded-lg bg-amber-600 text-white text-xs font-bold hover:bg-amber-700">Abrir turno</button>
         </div>
         <div class="grid grid-cols-2 gap-3">
           <button id="btn-split-bill" class="py-3 rounded-xl border-2 border-slate-200 font-bold text-slate-600 hover:bg-white active:scale-95 transition-all">Dividir cuenta</button>

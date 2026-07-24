@@ -152,12 +152,16 @@ async function enterApp() {
 
   if (cashSessionId) await checkCashAlert();
 
-  if (!cashSessionId) {
-    el('screen-open-session').classList.remove('hidden');
-    el('screen-open-session').classList.add('flex');
-    el('btn-charge').disabled = true;
-  }
+  // Abrir turno ya no bloquea la pantalla: solo impide cobrar hasta que se abra.
+  // Se puede seguir consultando Productos/Inventario/Configuración sin turno.
+  updateNoSessionBanner();
   syncPendingSales();
+}
+
+function updateNoSessionBanner() {
+  const banner = el('no-session-banner');
+  banner.classList.toggle('hidden', !!cashSessionId);
+  banner.classList.toggle('flex', !cashSessionId);
 }
 
 function applyRoleUi() {
@@ -483,10 +487,21 @@ el('btn-open-session').addEventListener('click', async () => {
     el('screen-open-session').classList.add('hidden');
     el('screen-open-session').classList.remove('flex');
     renderTicket();
+    updateNoSessionBanner();
     await checkCashAlert();
   } catch (err) {
     toast(err.message);
   }
+});
+
+el('btn-open-session-inline')?.addEventListener('click', () => {
+  el('screen-open-session').classList.remove('hidden');
+  el('screen-open-session').classList.add('flex');
+});
+
+el('btn-cancel-open-session')?.addEventListener('click', () => {
+  el('screen-open-session').classList.add('hidden');
+  el('screen-open-session').classList.remove('flex');
 });
 
 el('btn-close-session').addEventListener('click', async () => {
