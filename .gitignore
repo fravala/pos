@@ -12,3 +12,7 @@ __pycache__/
 
 # Sistema
 .DS_Store
+
+# Config local de Claude Code / MCP — no es parte del proyecto
+.claude/
+.mcp.json
