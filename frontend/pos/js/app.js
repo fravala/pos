@@ -4,6 +4,7 @@ import { openModifiers } from './modifiers.js';
 import { loadSettingsView } from './settings.js';
 import { loadUsersView } from './users.js';
 import { loadInventoryView } from './inventory.js';
+import { enterSuperAdmin } from './superadmin.js';
 
 let session = null; // { token, user }
 let cashSessionId = null;
@@ -90,6 +91,10 @@ function applyKdsVisibility() {
 async function enterApp() {
   if (session.user.role === 'KITCHEN') {
     location.href = '/kds/';
+    return;
+  }
+  if (session.user.role === 'SUPERADMIN') {
+    await enterSuperAdmin(session);
     return;
   }
   el('user-label').textContent = `${session.user.username} (${session.user.role})`;

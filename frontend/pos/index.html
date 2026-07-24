@@ -56,6 +56,74 @@
   </div>
 </div>
 
+<!-- ==================== SUPERADMIN PANEL ==================== -->
+<div id="screen-superadmin" class="hidden h-screen flex flex-col bg-[#F7F8FA]">
+  <header class="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6 shrink-0 shadow-sm">
+    <span class="font-headline font-black text-lg text-primary">Panel de Plataforma</span>
+    <div class="flex items-center gap-3">
+      <span id="superadmin-user-label" class="text-sm text-slate-600 font-medium"></span>
+      <button id="btn-superadmin-logout" class="rounded-lg px-3 py-2 text-xs font-semibold bg-slate-800 text-white hover:bg-slate-900">Salir</button>
+    </div>
+  </header>
+
+  <main class="flex-1 overflow-y-auto p-6">
+    <div class="max-w-4xl mx-auto space-y-6">
+      <div class="flex justify-between items-center">
+        <h2 class="text-xl font-headline font-extrabold text-slate-900">Empresas</h2>
+        <button id="btn-new-tenant" class="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all">
+          <span class="material-symbols-outlined text-lg">add_business</span>
+          Nueva empresa
+        </button>
+      </div>
+      <div id="tenants-list" class="space-y-3"></div>
+    </div>
+  </main>
+</div>
+
+<!-- Modal nueva empresa -->
+<div id="modal-tenant" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-md bg-white rounded-2xl shadow-lg p-6 space-y-4">
+    <h2 class="text-xl font-headline font-extrabold text-slate-900">Nueva empresa</h2>
+    <form id="form-tenant" class="space-y-3">
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Nombre de la empresa</span>
+        <input id="tenant-name" type="text" required class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Nombre de la primera sucursal</span>
+        <input id="tenant-location-name" type="text" required placeholder="Ej: Sucursal Centro" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Usuario administrador inicial</span>
+        <input id="tenant-admin-username" type="text" required class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">Contraseña</span>
+        <input id="tenant-admin-password" type="password" required minlength="6" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <p id="tenant-form-error" class="hidden text-red-500 text-sm"></p>
+      <div class="flex gap-3 pt-2">
+        <button type="button" id="btn-tenant-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+        <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Crear empresa</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Modal renombrar empresa -->
+<div id="modal-tenant-rename" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 space-y-4">
+    <h2 class="text-xl font-headline font-extrabold text-slate-900">Renombrar empresa</h2>
+    <form id="form-tenant-rename" class="space-y-3">
+      <input id="tenant-rename-name" type="text" required class="w-full h-12 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      <div class="flex gap-3 pt-2">
+        <button type="button" id="btn-tenant-rename-cancel" class="flex-1 h-12 rounded-xl bg-slate-100 text-slate-600 font-semibold">Cancelar</button>
+        <button type="submit" class="flex-1 h-12 rounded-xl bg-primary text-white font-bold">Guardar</button>
+      </div>
+    </form>
+  </div>
+</div>
+
 <!-- ==================== MAIN APP ==================== -->
 <div id="app" class="hidden h-screen flex flex-col">
 
@@ -697,5 +765,6 @@
 <script type="module" src="./js/settings.js"></script>
 <script type="module" src="./js/inventory.js"></script>
 <script type="module" src="./js/users.js"></script>
+<script type="module" src="./js/superadmin.js"></script>
 </body>
 </html>

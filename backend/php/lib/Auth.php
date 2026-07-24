@@ -19,14 +19,22 @@ class Auth
         // La verificación de credenciales corre con rol de servicio (bypass RLS),
         // por eso NO se aplican claims JWT antes de este SELECT.
         $stmt = $pdo->prepare(
-            'select id, tenant_id, location_id, role, username, password_hash, status
-             from users where username = :username limit 1'
+            'select u.id, u.tenant_id, u.location_id, u.role, u.username, u.password_hash, u.status,
+                    t.status as tenant_status
+             from users u
+             left join tenants t on t.id = u.tenant_id
+             where u.username = :username limit 1'
         );
         $stmt->execute(['username' => $username]);
         $user = $stmt->fetch();
 
         if (!$user || $user['status'] !== 'ACTIVE') {
             throw new \RuntimeException('Credenciales inválidas');
+        }
+
+        // SUPERADMIN no pertenece a ningún tenant (tenant_id null), así que no aplica.
+        if ($user['tenant_id'] !== null && $user['tenant_status'] !== 'ACTIVE') {
+            throw new \RuntimeException('Esta empresa está desactivada. Contacta al administrador de la plataforma.');
         }
 
         if (!password_verify($password, $user['password_hash'])) {
