@@ -90,7 +90,7 @@ function applyKdsVisibility() {
 
 async function enterApp() {
   if (session.user.role === 'KITCHEN') {
-    location.href = '/kds/';
+    location.href = window.__ENV__?.KDS_URL || '/kds/';
     return;
   }
   if (session.user.role === 'SUPERADMIN') {
@@ -208,7 +208,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
 
     const view = btn.dataset.view;
     if (view === 'kds') {
-      window.open('/kds/', '_blank');
+      window.open(window.__ENV__?.KDS_URL || '/kds/', '_blank');
       return;
     }
 
