@@ -126,6 +126,8 @@ const roleLabel = { ADMIN: 'Administrador', CASHIER: 'Cajero', KITCHEN: 'Cocina'
 async function openTenantDetail(tenant) {
   el('tenant-detail-name').textContent = tenant.name;
   el('tenant-detail-sales').innerHTML = '';
+  el('tenant-detail-chart').innerHTML = '';
+  el('tenant-detail-top-products').innerHTML = '';
   el('tenant-detail-locations').innerHTML = '';
   el('tenant-detail-users').innerHTML = '';
 
@@ -153,6 +155,44 @@ function renderTenantDetail(data) {
       <p class="text-xl font-black text-slate-900">${money(s.week_total)}</p>
       <p class="text-xs text-slate-400">${s.week_count} órdenes</p>
     </div>`;
+
+  const dayLabels = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+  const dailyMap = {};
+  (data.daily || []).forEach((d) => { dailyMap[d.day] = Number(d.total); });
+  const days = [];
+  for (let i = 6; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    days.push(d.toISOString().slice(0, 10));
+  }
+  const maxTotal = Math.max(...days.map((k) => dailyMap[k] || 0), 1);
+  const chartWrap = el('tenant-detail-chart');
+  if (!(data.daily || []).length) {
+    chartWrap.innerHTML = `<p class="text-sm text-slate-400 m-auto">Sin ventas en los últimos 7 días.</p>`;
+  } else {
+    chartWrap.innerHTML = days.map((k) => {
+      const value = dailyMap[k] || 0;
+      const heightPct = Math.max((value / maxTotal) * 100, value > 0 ? 4 : 0);
+      const dow = new Date(k + 'T00:00:00').getDay();
+      return `
+        <div class="flex-1 flex flex-col items-center justify-end h-full gap-1">
+          <span class="text-[10px] text-slate-500 font-semibold">${value > 0 ? money(value) : ''}</span>
+          <div class="w-full bg-primary rounded-t-md" style="height: ${heightPct}%; min-height: ${value > 0 ? '4px' : '0'}"></div>
+          <span class="text-[10px] text-slate-400">${dayLabels[dow]}</span>
+        </div>`;
+    }).join('');
+  }
+
+  const topWrap = el('tenant-detail-top-products');
+  if (!(data.top_products || []).length) {
+    topWrap.innerHTML = `<p class="text-sm text-slate-400">Sin ventas en los últimos 7 días.</p>`;
+  } else {
+    topWrap.innerHTML = data.top_products.map((p) => `
+      <div class="bg-slate-50 rounded-lg p-3 flex items-center justify-between text-sm">
+        <span class="font-semibold text-slate-700">${p.name}</span>
+        <span class="text-slate-500">${p.qty} uds · <strong class="text-slate-900">${money(p.revenue)}</strong></span>
+      </div>`).join('');
+  }
 
   const locWrap = el('tenant-detail-locations');
   if (!data.locations.length) {

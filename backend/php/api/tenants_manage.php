@@ -61,11 +61,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET' && $action === 'detail') {
     $salesStmt->execute(['id' => $tenantId]);
     $sales = $salesStmt->fetch();
 
+    $dailyStmt = $pdo->prepare(
+        "select date_trunc('day', created_at)::date as day, coalesce(sum(total), 0) as total, count(*) as count
+         from orders
+         where tenant_id = :id and status = 'PAID' and created_at >= now() - interval '7 days'
+         group by 1
+         order by 1 asc"
+    );
+    $dailyStmt->execute(['id' => $tenantId]);
+    $daily = $dailyStmt->fetchAll();
+
+    $topProductsStmt = $pdo->prepare(
+        "select p.name, sum(oi.quantity) as qty, sum(oi.quantity * oi.unit_price) as revenue
+         from order_items oi
+         join orders o on o.id = oi.order_id
+         join products p on p.id = oi.product_id
+         where o.tenant_id = :id and o.status = 'PAID' and o.created_at >= now() - interval '7 days'
+         group by p.id, p.name
+         order by revenue desc
+         limit 5"
+    );
+    $topProductsStmt->execute(['id' => $tenantId]);
+    $topProducts = $topProductsStmt->fetchAll();
+
     echo json_encode([
         'tenant' => $tenant,
         'locations' => $locations,
         'users' => $users,
         'sales' => $sales,
+        'daily' => $daily,
+        'top_products' => $topProducts,
     ]);
     exit;
 }
