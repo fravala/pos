@@ -64,7 +64,6 @@ el('form-login').addEventListener('submit', async (e) => {
     const result = await login(username, password);
     await setSessionValue('jwt', result.token);
     await setSessionValue('user', result.user);
-    localStorage.setItem('kds_jwt', result.token);
     session = { token: result.token, user: result.user };
     await enterApp();
   } catch (err) {
@@ -77,7 +76,6 @@ el('btn-logout').addEventListener('click', async () => {
   await setSessionValue('jwt', null);
   await setSessionValue('user', null);
   await setSessionValue('cash_session_id', null);
-  localStorage.removeItem('kds_jwt');
   session = null;
   cashSessionId = null;
   location.reload();

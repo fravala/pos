@@ -1,8 +1,53 @@
 // KDS — modo oscuro estricto. Polling (sin libs externas) contra vista_kds_order_items.
 const SUPABASE_URL = window.__ENV__?.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = window.__ENV__?.SUPABASE_ANON_KEY || '';
+const PHP_API_BASE = window.__ENV__?.PHP_API_BASE || 'http://localhost:8000';
 const POLL_INTERVAL_MS = 4000;
 const READY_HIDE_AFTER_MS = 2 * 60 * 60 * 1000; // "Listo" desaparece de la vista tras 2h (no se borra el registro)
+
+// ============================================================
+// LOGIN — KDS vive en su propio subdominio, no comparte sesión con el POS.
+// Login propio contra el mismo backend PHP, token guardado en localStorage local.
+// ============================================================
+function getToken() {
+  return localStorage.getItem('kds_jwt') || '';
+}
+
+function showKds() {
+  document.getElementById('screen-login').classList.add('hidden');
+  document.getElementById('screen-kds').classList.remove('hidden');
+  startPolling();
+}
+
+function showLogin() {
+  document.getElementById('screen-kds').classList.add('hidden');
+  document.getElementById('screen-login').classList.remove('hidden');
+}
+
+document.getElementById('form-login').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const username = document.getElementById('login-username').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errorEl = document.getElementById('login-error');
+  errorEl.classList.add('hidden');
+  try {
+    const res = await fetch(`${PHP_API_BASE}/login.php`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    if (!res.ok) throw new Error((await res.json()).error || 'Login fallido');
+    const data = await res.json();
+    if (data.user.role !== 'KITCHEN' && data.user.role !== 'ADMIN' && data.user.role !== 'SUPERADMIN') {
+      throw new Error('Este usuario no tiene acceso a cocina');
+    }
+    localStorage.setItem('kds_jwt', data.token);
+    showKds();
+  } catch (err) {
+    errorEl.textContent = err.message || 'Error al iniciar sesión';
+    errorEl.classList.remove('hidden');
+  }
+});
 
 // ============================================================
 // ALERTA SONORA: nueva orden en "Pendientes"
@@ -33,10 +78,6 @@ function playNewOrderBeep() {
   });
 }
 
-function getToken() {
-  return localStorage.getItem('kds_jwt') || '';
-}
-
 async function fetchOrders() {
   const res = await fetch(
     `${SUPABASE_URL}/rest/v1/view_kds_order_items?select=*&kitchen_status=neq.DELIVERED&order=order_created_at.asc`,
@@ -47,6 +88,7 @@ async function fetchOrders() {
       },
     }
   );
+  if (res.status === 401) { localStorage.removeItem('kds_jwt'); showLogin(); throw new Error('Sesión expirada'); }
   if (!res.ok) throw new Error('Error consultando pedidos');
   return res.json();
 }
@@ -236,10 +278,26 @@ async function updateAvgPrepTime() {
 }
 
 document.getElementById('btn-refresh').addEventListener('click', () => { render(); updateAvgPrepTime(); });
+document.getElementById('btn-kds-logout').addEventListener('click', () => {
+  localStorage.removeItem('kds_jwt');
+  location.reload();
+});
 
-render();
-updateAvgPrepTime();
-setInterval(updateAvgPrepTime, POLL_INTERVAL_MS * 5);
-setInterval(render, POLL_INTERVAL_MS);
+let pollingStarted = false;
+function startPolling() {
+  if (pollingStarted) return;
+  pollingStarted = true;
+  render();
+  updateAvgPrepTime();
+  setInterval(updateAvgPrepTime, POLL_INTERVAL_MS * 5);
+  setInterval(render, POLL_INTERVAL_MS);
+}
+
 tickClock();
 setInterval(tickClock, 1000);
+
+if (getToken()) {
+  showKds();
+} else {
+  showLogin();
+}

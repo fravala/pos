@@ -26,6 +26,20 @@
 </head>
 <body class="bg-[#09090b] text-zinc-100 font-body h-screen overflow-hidden flex flex-col">
 
+<!-- ==================== LOGIN SCREEN ==================== -->
+<div id="screen-login" class="fixed inset-0 z-50 flex items-center justify-center bg-[#09090b]">
+  <form id="form-login" class="w-full max-w-sm bg-[#18181b] border border-zinc-800 rounded-2xl shadow-lg p-8 space-y-4">
+    <h1 class="text-2xl font-headline font-black text-primary text-center">KDS — Cocina</h1>
+    <input id="login-username" type="text" placeholder="Usuario" autocomplete="username"
+      class="w-full h-12 px-4 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 focus:border-primary focus:outline-none">
+    <input id="login-password" type="password" placeholder="Contraseña" autocomplete="current-password"
+      class="w-full h-12 px-4 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-100 focus:border-primary focus:outline-none">
+    <p id="login-error" class="hidden text-red-400 text-sm"></p>
+    <button type="submit" class="w-full h-12 rounded-xl bg-primary text-white font-bold">Entrar</button>
+  </form>
+</div>
+
+<div id="screen-kds" class="hidden h-screen flex flex-col">
 <header class="flex justify-between items-center px-6 py-4 w-full bg-[#18181b] shadow-sm border-b border-zinc-800 shrink-0">
   <div class="flex items-center gap-6">
     <div class="flex flex-col">
@@ -50,6 +64,10 @@
     <button id="btn-refresh" class="p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm font-semibold">
       <span class="material-symbols-outlined">refresh</span>
       Actualizar
+    </button>
+    <button id="btn-kds-logout" class="p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm font-semibold">
+      <span class="material-symbols-outlined">logout</span>
+      Salir
     </button>
   </div>
 </header>
@@ -88,6 +106,7 @@
     </section>
   </div>
 </main>
+</div>
 
 <script type="module" src="./js/kds.js"></script>
 </body>
