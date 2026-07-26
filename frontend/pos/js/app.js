@@ -550,22 +550,44 @@ el('btn-charge').addEventListener('click', () => {
   const total = ticketTotal();
   el('payment-total').textContent = money(total);
   selectedPaymentMethod = null;
+  el('cash-tendered').value = '';
+  el('cash-change').textContent = money(0);
+  el('cash-tendered-wrap').classList.add('hidden');
+  document.querySelectorAll('.payment-method-btn').forEach((b) => b.classList.remove('bg-primary', 'text-white'));
   el('btn-confirm-payment').disabled = true;
   el('modal-payment').classList.remove('hidden');
   el('modal-payment').classList.add('flex');
 });
+
+function updateCashChange() {
+  const total = ticketTotal();
+  const tendered = Number(el('cash-tendered').value) || 0;
+  const change = Math.max(tendered - total, 0);
+  el('cash-change').textContent = money(change);
+  el('btn-confirm-payment').disabled = tendered < total;
+}
+
+el('cash-tendered').addEventListener('input', updateCashChange);
 
 document.querySelectorAll('.payment-method-btn').forEach((btn) => {
   btn.addEventListener('click', () => {
     selectedPaymentMethod = btn.dataset.method;
     document.querySelectorAll('.payment-method-btn').forEach((b) => b.classList.remove('bg-primary', 'text-white'));
     btn.classList.add('bg-primary', 'text-white');
-    el('btn-confirm-payment').disabled = false;
+    if (selectedPaymentMethod === 'CASH') {
+      el('cash-tendered-wrap').classList.remove('hidden');
+      updateCashChange();
+    } else {
+      el('cash-tendered-wrap').classList.add('hidden');
+      el('btn-confirm-payment').disabled = false;
+    }
   });
 });
 
 el('btn-confirm-payment').addEventListener('click', async () => {
   const total = ticketTotal();
+  const cashTendered = selectedPaymentMethod === 'CASH' ? Number(el('cash-tendered').value) || 0 : null;
+  const cashChange = cashTendered !== null ? Math.max(cashTendered - total, 0) : null;
   const orderPayload = {
     location_id: session.user.location_id,
     tenant_id: session.user.tenant_id,
@@ -584,9 +606,10 @@ el('btn-confirm-payment').addEventListener('click', async () => {
     payment_method: selectedPaymentMethod,
   };
 
+  let dailyNumber = null;
   try {
     if (isOnline()) {
-      await submitOrder(orderPayload);
+      dailyNumber = await submitOrder(orderPayload);
     } else {
       await enqueueSync(orderPayload);
       toast('Sin conexión: venta guardada, se sincronizará al reconectar');
@@ -596,7 +619,7 @@ el('btn-confirm-payment').addEventListener('click', async () => {
     toast('Error de red: venta guardada localmente');
   }
 
-  if (autoPrintReceipt) printSaleReceipt(ticket, total, selectedPaymentMethod);
+  if (autoPrintReceipt) printSaleReceipt(ticket, total, selectedPaymentMethod, cashTendered, cashChange, dailyNumber);
 
   ticket = [];
   discountAmount = 0;
@@ -604,9 +627,20 @@ el('btn-confirm-payment').addEventListener('click', async () => {
   el('modal-payment').classList.add('hidden');
   el('modal-payment').classList.remove('flex');
   if (selectedPaymentMethod === 'CASH') await checkCashAlert();
+
+  if (dailyNumber != null) {
+    el('order-number-display').textContent = `#${dailyNumber}`;
+    el('modal-order-number').classList.remove('hidden');
+    el('modal-order-number').classList.add('flex');
+  }
 });
 
-function printSaleReceipt(items, total, paymentMethod) {
+el('btn-order-number-close')?.addEventListener('click', () => {
+  el('modal-order-number').classList.add('hidden');
+  el('modal-order-number').classList.remove('flex');
+});
+
+function printSaleReceipt(items, total, paymentMethod, cashTendered, cashChange, dailyNumber) {
   const supplyById = Object.fromEntries(supplies.map((s) => [s.id, s]));
   const now = new Date();
 
@@ -626,6 +660,7 @@ function printSaleReceipt(items, total, paymentMethod) {
   el('sale-receipt-print-view').innerHTML = `
     <div style="padding:16px;font-family:monospace;color:#0f172a;max-width:320px;margin:0 auto;">
       <h1 style="font-size:16px;font-weight:800;text-align:center;margin-bottom:2px;">${el('location-name').textContent}</h1>
+      ${dailyNumber != null ? `<p style="font-size:22px;font-weight:800;text-align:center;margin-bottom:2px;">Orden #${dailyNumber}</p>` : ''}
       <p style="font-size:11px;color:#64748b;text-align:center;margin-bottom:12px;">${now.toLocaleDateString('es-MX')} ${now.toLocaleTimeString('es-MX')}</p>
       <div style="border-top:1px dashed #94a3b8;border-bottom:1px dashed #94a3b8;padding:8px 0;margin-bottom:8px;">
         ${rows}
@@ -641,6 +676,9 @@ function printSaleReceipt(items, total, paymentMethod) {
         <span>Total</span><span>${money(total)}</span>
       </div>
       <p style="font-size:12px;color:#64748b;">Pago: ${paymentMethod === 'CASH' ? 'Efectivo' : 'Transferencia'}</p>
+      ${paymentMethod === 'CASH' ? `
+      <p style="font-size:12px;color:#64748b;">Paga con: ${money(cashTendered)}</p>
+      <p style="font-size:12px;color:#64748b;">Cambio: ${money(cashChange)}</p>` : ''}
       <p style="font-size:12px;color:#64748b;">Atendió: ${session.user.username}</p>
       <p style="text-align:center;font-size:11px;color:#94a3b8;margin-top:16px;">¡Gracias por su compra!</p>
     </div>`;
@@ -677,6 +715,9 @@ async function submitOrder(payload) {
   });
 
   toast('Venta cobrada');
+
+  const rows = await supabaseGet(`view_kds_order_items?order_id=eq.${orderId}&select=daily_number&limit=1`);
+  return rows[0]?.daily_number ?? null;
 }
 
 async function syncPendingSales() {

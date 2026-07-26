@@ -805,9 +805,29 @@
       <button data-method="CASH" class="payment-method-btn h-16 rounded-xl bg-slate-100 font-semibold">Efectivo</button>
       <button data-method="TRANSFER" class="payment-method-btn h-16 rounded-xl bg-slate-100 font-semibold">Transferencia</button>
     </div>
+    <div id="cash-tendered-wrap" class="hidden space-y-2">
+      <label class="block">
+        <span class="text-sm font-semibold text-slate-500">¿Con cuánto paga?</span>
+        <input id="cash-tendered" type="number" step="0.01" min="0" placeholder="0.00"
+          class="w-full h-14 mt-1 px-4 text-lg rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+      </label>
+      <div class="flex justify-between items-center bg-slate-50 rounded-xl p-3">
+        <span class="text-sm font-semibold text-slate-500">Cambio a dar</span>
+        <span id="cash-change" class="text-xl font-black text-slate-900">$0.00</span>
+      </div>
+    </div>
     <button id="btn-confirm-payment" class="w-full h-14 rounded-xl bg-emerald-500 text-white font-bold disabled:opacity-40" disabled>
       Confirmar
     </button>
+  </div>
+</div>
+
+<!-- Modal número de orden (se muestra al cliente tras cobrar) -->
+<div id="modal-order-number" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60">
+  <div class="w-full max-w-xs bg-white rounded-2xl shadow-lg p-8 text-center space-y-3">
+    <p class="text-sm font-semibold text-slate-500 uppercase tracking-wide">Tu número de orden</p>
+    <p id="order-number-display" class="text-6xl font-black text-primary">—</p>
+    <button id="btn-order-number-close" class="w-full h-12 rounded-xl bg-slate-100 text-slate-600 font-bold mt-4">Cerrar</button>
   </div>
 </div>
 
