@@ -630,6 +630,12 @@ el('btn-confirm-payment').addEventListener('click', async () => {
 
   if (dailyNumber != null) {
     el('order-number-display').textContent = `#${dailyNumber}`;
+    if (cashChange !== null) {
+      el('order-number-change').textContent = money(cashChange);
+      el('order-number-change-wrap').classList.remove('hidden');
+    } else {
+      el('order-number-change-wrap').classList.add('hidden');
+    }
     el('modal-order-number').classList.remove('hidden');
     el('modal-order-number').classList.add('flex');
   }
