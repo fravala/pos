@@ -112,3 +112,27 @@ el('form-settings')?.addEventListener('submit', async (e) => {
   msg.classList.remove('hidden');
   setTimeout(() => msg.classList.add('hidden'), 2000);
 });
+
+// ============================================================
+// NAV DE SECCIONES (Sucursal / Caja / Checklists / Usuarios)
+// ============================================================
+const SETTINGS_FORM_SECTIONS = ['sucursal', 'caja']; // viven dentro de #form-settings
+
+document.querySelectorAll('.settings-nav-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const section = btn.dataset.settingsSection;
+
+    document.querySelectorAll('.settings-nav-btn').forEach((b) => {
+      b.classList.toggle('bg-primary/5', b === btn);
+      b.classList.toggle('text-primary', b === btn);
+      b.classList.toggle('text-slate-600', b !== btn);
+    });
+
+    document.querySelectorAll('[data-settings-panel]').forEach((panel) => {
+      panel.classList.toggle('hidden', panel.dataset.settingsPanel !== section);
+    });
+
+    el('form-settings').querySelector('[data-settings-submit-wrap]')
+      .classList.toggle('hidden', !SETTINGS_FORM_SECTIONS.includes(section));
+  });
+});

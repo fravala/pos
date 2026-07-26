@@ -680,108 +680,142 @@
   </div>
 
   <!-- Business Settings (ADMIN) -->
-  <div id="view-settings" class="hidden flex-1 overflow-y-auto p-6">
-    <form id="form-settings" class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-6">
-      <h2 class="text-xl font-bold">Configuración del negocio</h2>
-
-      <div class="grid sm:grid-cols-2 gap-4">
-        <label class="block">
-          <span class="text-sm font-semibold text-slate-500">Logo (URL)</span>
-          <input id="settings-logo-url" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
-        </label>
-        <label class="block">
-          <span class="text-sm font-semibold text-slate-500">WhatsApp para pedidos</span>
-          <input id="settings-whatsapp" type="text" placeholder="+52..." class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
-        </label>
-      </div>
-
-      <label class="block">
-        <span class="text-sm font-semibold text-slate-500">Descripción</span>
-        <textarea id="settings-description" rows="3" class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none"></textarea>
-      </label>
-
-      <label class="block">
-        <span class="text-sm font-semibold text-slate-500">Avisar cuando el efectivo en caja supere</span>
-        <input id="settings-cash-alert" type="number" step="1" min="0" placeholder="Ej: 3000" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
-        <span class="text-xs text-slate-400">Deja vacío para desactivar el aviso. Ayuda a que no se acumule demasiado dinero en caja entre cortes.</span>
-      </label>
-
-      <label class="flex items-center gap-2">
-        <input id="settings-auto-print" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
-        <span class="text-sm font-semibold text-slate-600">Imprimir ticket automáticamente al cobrar una venta</span>
-      </label>
-
-      <label class="flex items-center gap-2">
-        <input id="settings-kds-enabled" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
-        <span class="text-sm font-semibold text-slate-600">Usar Cocina (KDS)</span>
-      </label>
-      <p class="text-xs text-slate-400 -mt-3">Apágalo si tu negocio no prepara pedidos en cocina (ej. solo vendes productos ya empacados). Las ventas se marcarán como entregadas directo, sin pasar por Pendiente/En preparación.</p>
-
-      <div class="grid sm:grid-cols-3 gap-4">
-        <label class="block">
-          <span class="text-sm font-semibold text-slate-500">Facebook</span>
-          <input id="settings-social-facebook" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
-        </label>
-        <label class="block">
-          <span class="text-sm font-semibold text-slate-500">Instagram</span>
-          <input id="settings-social-instagram" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
-        </label>
-        <label class="block">
-          <span class="text-sm font-semibold text-slate-500">TikTok</span>
-          <input id="settings-social-tiktok" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
-        </label>
-      </div>
-
-      <div>
-        <span class="text-sm font-semibold text-slate-500">Horario de atención</span>
-        <div id="settings-hours" class="mt-2 space-y-2"></div>
-      </div>
-
-      <button type="submit" class="w-full h-14 rounded-xl bg-primary text-white font-bold active:bg-orange-700">
-        Guardar configuración
-      </button>
-      <p id="settings-saved-msg" class="hidden text-emerald-600 text-sm text-center">Guardado ✓</p>
-    </form>
-
-    <!-- Usuarios y Permisos -->
-    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-4 mt-6">
-      <div class="flex justify-between items-center">
-        <h2 class="text-xl font-bold">Usuarios y permisos</h2>
-        <button id="btn-new-user" class="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all">
-          <span class="material-symbols-outlined text-lg">person_add</span>
-          Nuevo usuario
+  <div id="view-settings" class="hidden flex-1 overflow-hidden flex-col sm:flex-row">
+    <!-- Nav de secciones -->
+    <aside class="shrink-0 w-full sm:w-64 bg-white border-b sm:border-b-0 sm:border-r border-slate-200 p-3 sm:p-4 overflow-x-auto sm:overflow-y-auto">
+      <p class="hidden sm:block text-[11px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-3">Preferencias del sistema</p>
+      <nav class="flex sm:flex-col gap-1 settings-nav">
+        <button data-settings-section="sucursal" class="settings-nav-btn flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold text-sm whitespace-nowrap bg-primary/5 text-primary">
+          <span class="material-symbols-outlined text-xl">store</span>
+          <span>Sucursal</span>
         </button>
-      </div>
-      <div id="users-list" class="space-y-2"></div>
-    </div>
+        <button data-settings-section="caja" class="settings-nav-btn flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold text-sm whitespace-nowrap text-slate-600 hover:bg-slate-50">
+          <span class="material-symbols-outlined text-xl">payments</span>
+          <span>Caja y alertas</span>
+        </button>
+        <button data-settings-section="checklists" class="settings-nav-btn flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold text-sm whitespace-nowrap text-slate-600 hover:bg-slate-50">
+          <span class="material-symbols-outlined text-xl">checklist</span>
+          <span>Checklists</span>
+        </button>
+        <button data-settings-section="usuarios" class="settings-nav-btn flex items-center gap-3 px-4 py-2.5 rounded-lg font-semibold text-sm whitespace-nowrap text-slate-600 hover:bg-slate-50">
+          <span class="material-symbols-outlined text-xl">group</span>
+          <span>Usuarios y permisos</span>
+        </button>
+      </nav>
+    </aside>
 
-    <!-- Checklists de apertura y cierre -->
-    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-6 mt-6">
-      <h2 class="text-xl font-bold">Checklists de apertura y cierre</h2>
-      <p class="text-xs text-slate-400 -mt-4">Se muestran al abrir turno y al hacer Corte Z. Son de esta sucursal.</p>
+    <!-- Contenido de la sección activa -->
+    <div class="flex-1 overflow-y-auto p-6 bg-[#F7F8FA]">
+      <form id="form-settings" class="max-w-2xl mx-auto space-y-6">
+        <div data-settings-panel="sucursal" class="bg-white rounded-2xl shadow-sm p-6 space-y-6">
+          <h2 class="text-xl font-bold">Información de la sucursal</h2>
 
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Apertura</h3>
+          <div class="grid sm:grid-cols-2 gap-4">
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">Logo (URL)</span>
+              <input id="settings-logo-url" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">WhatsApp para pedidos</span>
+              <input id="settings-whatsapp" type="text" placeholder="+52..." class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+          </div>
+
+          <label class="block">
+            <span class="text-sm font-semibold text-slate-500">Descripción</span>
+            <textarea id="settings-description" rows="3" class="w-full mt-1 px-3 py-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none"></textarea>
+          </label>
+
+          <div class="grid sm:grid-cols-3 gap-4">
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">Facebook</span>
+              <input id="settings-social-facebook" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">Instagram</span>
+              <input id="settings-social-instagram" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+            <label class="block">
+              <span class="text-sm font-semibold text-slate-500">TikTok</span>
+              <input id="settings-social-tiktok" type="url" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            </label>
+          </div>
+
+          <div>
+            <span class="text-sm font-semibold text-slate-500">Horario de atención</span>
+            <div id="settings-hours" class="mt-2 space-y-2"></div>
+          </div>
         </div>
-        <div id="checklist-opening-list" class="space-y-1 mb-3"></div>
-        <form class="checklist-add-form flex gap-2" data-type="OPENING">
-          <input type="text" placeholder="Nuevo ítem, ej. Encender freidoras" required
-            class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
-          <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
-        </form>
+
+        <div data-settings-panel="caja" class="hidden bg-white rounded-2xl shadow-sm p-6 space-y-6">
+          <h2 class="text-xl font-bold">Caja y alertas</h2>
+
+          <label class="block">
+            <span class="text-sm font-semibold text-slate-500">Avisar cuando el efectivo en caja supere</span>
+            <input id="settings-cash-alert" type="number" step="1" min="0" placeholder="Ej: 3000" class="w-full h-12 mt-1 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none">
+            <span class="text-xs text-slate-400">Deja vacío para desactivar el aviso. Ayuda a que no se acumule demasiado dinero en caja entre cortes.</span>
+          </label>
+
+          <label class="flex items-center gap-2">
+            <input id="settings-auto-print" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
+            <span class="text-sm font-semibold text-slate-600">Imprimir ticket automáticamente al cobrar una venta</span>
+          </label>
+
+          <label class="flex items-center gap-2">
+            <input id="settings-kds-enabled" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
+            <span class="text-sm font-semibold text-slate-600">Usar Cocina (KDS)</span>
+          </label>
+          <p class="text-xs text-slate-400 -mt-3">Apágalo si tu negocio no prepara pedidos en cocina (ej. solo vendes productos ya empacados). Las ventas se marcarán como entregadas directo, sin pasar por Pendiente/En preparación.</p>
+        </div>
+
+        <div data-settings-submit-wrap>
+          <button type="submit" class="w-full h-14 rounded-xl bg-primary text-white font-bold active:bg-orange-700">
+            Guardar configuración
+          </button>
+          <p id="settings-saved-msg" class="hidden text-emerald-600 text-sm text-center mt-2">Guardado ✓</p>
+        </div>
+      </form>
+
+      <!-- Checklists de apertura y cierre -->
+      <div data-settings-panel="checklists" class="hidden max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-6">
+        <h2 class="text-xl font-bold">Checklists de apertura y cierre</h2>
+        <p class="text-xs text-slate-400 -mt-4">Se muestran al abrir turno y al hacer Corte Z. Son de esta sucursal.</p>
+
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Apertura</h3>
+          </div>
+          <div id="checklist-opening-list" class="space-y-1 mb-3"></div>
+          <form class="checklist-add-form flex gap-2" data-type="OPENING">
+            <input type="text" placeholder="Nuevo ítem, ej. Encender freidoras" required
+              class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+            <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+          </form>
+        </div>
+
+        <div>
+          <div class="flex justify-between items-center mb-2">
+            <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Cierre</h3>
+          </div>
+          <div id="checklist-closing-list" class="space-y-1 mb-3"></div>
+          <form class="checklist-add-form flex gap-2" data-type="CLOSING">
+            <input type="text" placeholder="Nuevo ítem, ej. Contar caja chica" required
+              class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+            <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+          </form>
+        </div>
       </div>
 
-      <div>
-        <div class="flex justify-between items-center mb-2">
-          <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Cierre</h3>
+      <!-- Usuarios y Permisos -->
+      <div data-settings-panel="usuarios" class="hidden max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-4">
+        <div class="flex justify-between items-center">
+          <h2 class="text-xl font-bold">Usuarios y permisos</h2>
+          <button id="btn-new-user" class="flex items-center gap-2 bg-primary text-white px-4 py-2.5 rounded-xl font-bold text-sm shadow-lg shadow-primary/20 active:scale-95 transition-all">
+            <span class="material-symbols-outlined text-lg">person_add</span>
+            Nuevo usuario
+          </button>
         </div>
-        <div id="checklist-closing-list" class="space-y-1 mb-3"></div>
-        <form class="checklist-add-form flex gap-2" data-type="CLOSING">
-          <input type="text" placeholder="Nuevo ítem, ej. Contar caja chica" required
-            class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
-          <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
-        </form>
+        <div id="users-list" class="space-y-2"></div>
       </div>
     </div>
   </div>
