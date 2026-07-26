@@ -144,7 +144,7 @@ async function loadDashboard() {
   weekAgo.setDate(weekAgo.getDate() - 6); // hoy + 6 días atrás = 7 días
 
   const orders = await supabaseGet(
-    `orders?location_id=eq.${locationId}&status=eq.PAID&created_at=gte.${weekAgo.toISOString()}&select=total,created_at`
+    `orders?location_id=eq.${locationId}&status=eq.PAID&created_at=gte.${weekAgo.toISOString()}&select=id,total,created_at`
   );
 
   const dayTotals = {}; // 'YYYY-MM-DD' -> total
@@ -175,24 +175,46 @@ async function loadDashboard() {
 
   const avgTicket = weekCount > 0 ? weekTotal / weekCount : 0;
 
+  let topProductName = '—';
+  if (orders.length) {
+    const orderIds = orders.map((o) => o.id);
+    const weekItems = await supabaseGet(`order_items?order_id=in.(${orderIds.join(',')})&select=product_id,quantity`);
+    const qtyByProduct = {};
+    weekItems.forEach((i) => { qtyByProduct[i.product_id] = (qtyByProduct[i.product_id] || 0) + Number(i.quantity); });
+    const topId = Object.entries(qtyByProduct).sort((a, b) => b[1] - a[1])[0]?.[0];
+    topProductName = products.find((p) => p.id === topId)?.name || '—';
+  }
+
   el('dashboard-kpis').innerHTML = `
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Hoy</p>
-      <p class="text-2xl font-black text-slate-900">${money(todayTotal)}</p>
-      <p class="text-xs text-slate-400">${todayCount} ${todayCount === 1 ? 'orden' : 'órdenes'}</p>
-    </div>
-    <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Últimos 7 días</p>
+      <div class="flex justify-between items-start mb-2">
+        <span class="p-2 bg-orange-100 text-primary rounded-lg"><span class="material-symbols-outlined text-lg">payments</span></span>
+      </div>
+      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Ventas 7 días</p>
       <p class="text-2xl font-black text-slate-900">${money(weekTotal)}</p>
-      <p class="text-xs text-slate-400">${weekCount} ${weekCount === 1 ? 'orden' : 'órdenes'}</p>
+      <p class="text-xs text-slate-400">Hoy: ${money(todayTotal)}</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <div class="flex justify-between items-start mb-2">
+        <span class="p-2 bg-teal-100 text-secondary rounded-lg"><span class="material-symbols-outlined text-lg">receipt_long</span></span>
+      </div>
+      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Órdenes 7 días</p>
+      <p class="text-2xl font-black text-slate-900">${weekCount}</p>
+      <p class="text-xs text-slate-400">Hoy: ${todayCount}</p>
+    </div>
+    <div class="bg-white rounded-xl border border-slate-200 p-4">
+      <div class="flex justify-between items-start mb-2">
+        <span class="p-2 bg-blue-100 text-blue-600 rounded-lg"><span class="material-symbols-outlined text-lg">analytics</span></span>
+      </div>
       <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Ticket promedio</p>
       <p class="text-2xl font-black text-slate-900">${money(avgTicket)}</p>
     </div>
     <div class="bg-white rounded-xl border border-slate-200 p-4">
-      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Órdenes hoy</p>
-      <p class="text-2xl font-black text-slate-900">${todayCount}</p>
+      <div class="flex justify-between items-start mb-2">
+        <span class="p-2 bg-purple-100 text-purple-600 rounded-lg"><span class="material-symbols-outlined text-lg">star</span></span>
+      </div>
+      <p class="text-xs text-slate-400 uppercase tracking-wide mb-1">Producto más vendido</p>
+      <p class="text-lg font-black text-slate-900 truncate">${topProductName}</p>
     </div>`;
 
   const maxTotal = Math.max(...dayKeys.map((k) => dayTotals[k]), 1);
@@ -210,7 +232,106 @@ async function loadDashboard() {
   }).join('');
 
   await loadPrepTimeChart(weekAgo, dayKeys, dayLabels);
+  await loadOrderHistory();
 }
+
+// ============================================================
+// HISTORIAL DE ÓRDENES RECIENTES (tabla con búsqueda + paginación)
+// ============================================================
+let orderHistory = [];
+let orderHistoryPage = 0;
+const ORDER_HISTORY_PAGE_SIZE = 10;
+let usersById = {};
+
+async function loadOrderHistory() {
+  const [orders, users] = await Promise.all([
+    supabaseGet(`orders?location_id=eq.${locationId}&order=created_at.desc&limit=50&select=id,created_at,total,status,created_by`),
+    supabaseGet(`users?tenant_id=eq.${tenantId}&select=id,username`),
+  ]);
+  usersById = Object.fromEntries(users.map((u) => [u.id, u.username]));
+
+  const orderIds = orders.map((o) => o.id);
+  const itemCounts = {};
+  if (orderIds.length) {
+    const items = await supabaseGet(`order_items?order_id=in.(${orderIds.join(',')})&select=order_id,quantity`);
+    items.forEach((i) => { itemCounts[i.order_id] = (itemCounts[i.order_id] || 0) + Number(i.quantity); });
+  }
+
+  orderHistory = orders.map((o) => ({ ...o, itemCount: itemCounts[o.id] || 0 }));
+  orderHistoryPage = 0;
+  renderOrderHistory();
+}
+
+function renderOrderHistory() {
+  const search = (el('order-history-search')?.value || '').toLowerCase().trim();
+  const filtered = orderHistory.filter((o) => {
+    if (!search) return true;
+    const cashier = (usersById[o.created_by] || '').toLowerCase();
+    return o.id.toLowerCase().includes(search) || cashier.includes(search);
+  });
+
+  const start = orderHistoryPage * ORDER_HISTORY_PAGE_SIZE;
+  const pageRows = filtered.slice(start, start + ORDER_HISTORY_PAGE_SIZE);
+
+  const statusLabel = { PAID: ['Pagado', 'bg-success/10 text-success border-success/20'], OPEN: ['Abierta', 'bg-warning/10 text-warning border-warning/20'], CANCELLED: ['Cancelada', 'bg-red-500/10 text-red-500 border-red-500/20'] };
+
+  el('order-history-rows').innerHTML = pageRows.length ? pageRows.map((o) => {
+    const [label, cls] = statusLabel[o.status] || [o.status, 'bg-slate-100 text-slate-500 border-slate-200'];
+    const cashier = usersById[o.created_by] || '—';
+    const initials = cashier.slice(0, 2).toUpperCase();
+    const time = new Date(o.created_at).toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' });
+    return `
+      <tr class="hover:bg-slate-50/50 transition-colors">
+        <td class="px-4 py-3 font-bold text-slate-700">#${o.id.slice(0, 8)}</td>
+        <td class="px-4 py-3 text-slate-500">${time}</td>
+        <td class="px-4 py-3">
+          <div class="flex items-center gap-2">
+            <div class="w-6 h-6 rounded-full bg-orange-100 text-primary flex items-center justify-center text-[10px] font-bold shrink-0">${initials}</div>
+            <span class="truncate">${cashier}</span>
+          </div>
+        </td>
+        <td class="px-4 py-3">${o.itemCount} ${o.itemCount === 1 ? 'ítem' : 'ítems'}</td>
+        <td class="px-4 py-3 font-bold">${money(o.total)}</td>
+        <td class="px-4 py-3"><span class="px-3 py-1 text-[11px] font-bold rounded-full border ${cls}">${label}</span></td>
+        <td class="px-4 py-3 text-right"><button class="btn-order-detail text-primary font-bold hover:underline" data-id="${o.id}">Ver detalle</button></td>
+      </tr>`;
+  }).join('') : `<tr><td colspan="7" class="px-4 py-8 text-center text-slate-400">Sin órdenes.</td></tr>`;
+
+  document.querySelectorAll('.btn-order-detail').forEach((btn) => {
+    btn.addEventListener('click', () => openOrderDetail(btn.dataset.id));
+  });
+
+  el('order-history-count').textContent = filtered.length
+    ? `Mostrando ${start + 1}-${Math.min(start + ORDER_HISTORY_PAGE_SIZE, filtered.length)} de ${filtered.length} órdenes`
+    : 'Sin resultados';
+  el('order-history-prev').disabled = orderHistoryPage === 0;
+  el('order-history-next').disabled = start + ORDER_HISTORY_PAGE_SIZE >= filtered.length;
+}
+
+el('order-history-search')?.addEventListener('input', () => { orderHistoryPage = 0; renderOrderHistory(); });
+el('order-history-prev')?.addEventListener('click', () => { orderHistoryPage--; renderOrderHistory(); });
+el('order-history-next')?.addEventListener('click', () => { orderHistoryPage++; renderOrderHistory(); });
+
+async function openOrderDetail(orderId) {
+  el('order-detail-title').textContent = `Orden #${orderId.slice(0, 8)}`;
+  el('order-detail-items').innerHTML = `<p class="text-sm text-slate-400">Cargando...</p>`;
+  el('modal-order-detail').classList.remove('hidden');
+  el('modal-order-detail').classList.add('flex');
+
+  const rows = await supabaseGet(`view_kds_order_items?order_id=eq.${orderId}&select=product_name,quantity`);
+  el('order-detail-items').innerHTML = rows.length
+    ? rows.map((r) => `
+        <div class="flex justify-between items-center bg-slate-50 rounded-lg px-3 py-2 text-sm">
+          <span class="text-slate-700">${r.product_name}</span>
+          <span class="font-bold text-slate-600">x${r.quantity}</span>
+        </div>`).join('')
+    : `<p class="text-sm text-slate-400">Sin ítems.</p>`;
+}
+
+el('btn-order-detail-close')?.addEventListener('click', () => {
+  el('modal-order-detail').classList.add('hidden');
+  el('modal-order-detail').classList.remove('flex');
+});
 
 async function loadPrepTimeChart(weekAgo, dayKeys, dayLabels) {
   const orders = await supabaseGet(
