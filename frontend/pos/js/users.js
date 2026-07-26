@@ -32,7 +32,7 @@ export async function loadUsersView() {
 
 function populateLocationSelect() {
   el('user-location').innerHTML =
-    '<option value="">Sin sucursal (admin global)</option>' +
+    '<option value="">Dueño / ve todas las sucursales (no puede abrir caja)</option>' +
     locations.map((l) => `<option value="${l.id}">${l.name}</option>`).join('');
 }
 
