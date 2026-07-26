@@ -4,6 +4,7 @@ import { openModifiers } from './modifiers.js';
 import { loadSettingsView } from './settings.js';
 import { loadUsersView } from './users.js';
 import { loadInventoryView } from './inventory.js';
+import { loadChecklistSettings, runChecklist } from './checklist.js';
 import { enterSuperAdmin } from './superadmin.js';
 
 let session = null; // { token, user }
@@ -217,7 +218,7 @@ document.querySelectorAll('.nav-btn').forEach((btn) => {
     el('view-settings').classList.toggle('hidden', view !== 'settings');
     el('view-settings').classList.toggle('flex', view === 'settings');
 
-    if (view === 'settings') { await loadSettingsView(); await loadUsersView(); }
+    if (view === 'settings') { await loadSettingsView(); await loadUsersView(); await loadChecklistSettings(); }
     if (view === 'inventory') await loadInventoryView();
     if (view === 'caja') await loadCatalog();
   });
@@ -496,6 +497,7 @@ el('btn-split-bill').addEventListener('click', () => {
 el('btn-open-session').addEventListener('click', async () => {
   const opening = parseFloat(el('opening-balance').value);
   if (isNaN(opening) || opening < 0) return toast('Fondo inicial inválido');
+  await runChecklist('OPENING');
   try {
     const result = await phpPost('cash_session.php?action=open', { opening_balance: opening });
     cashSessionId = result.id;
@@ -523,6 +525,7 @@ el('btn-cancel-open-session')?.addEventListener('click', () => {
 
 el('btn-close-session').addEventListener('click', async () => {
   if (!cashSessionId) return toast('No hay turno abierto');
+  await runChecklist('CLOSING', cashSessionId);
   const actual = prompt('Efectivo contado en caja ($):');
   if (actual === null) return;
   try {

@@ -717,7 +717,46 @@
       </div>
       <div id="users-list" class="space-y-2"></div>
     </div>
+
+    <!-- Checklists de apertura y cierre -->
+    <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm p-6 space-y-6 mt-6">
+      <h2 class="text-xl font-bold">Checklists de apertura y cierre</h2>
+      <p class="text-xs text-slate-400 -mt-4">Se muestran al abrir turno y al hacer Corte Z. Son de esta sucursal.</p>
+
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Apertura</h3>
+        </div>
+        <div id="checklist-opening-list" class="space-y-1 mb-3"></div>
+        <form class="checklist-add-form flex gap-2" data-type="OPENING">
+          <input type="text" placeholder="Nuevo ítem, ej. Encender freidoras" required
+            class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+          <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+        </form>
+      </div>
+
+      <div>
+        <div class="flex justify-between items-center mb-2">
+          <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Cierre</h3>
+        </div>
+        <div id="checklist-closing-list" class="space-y-1 mb-3"></div>
+        <form class="checklist-add-form flex gap-2" data-type="CLOSING">
+          <input type="text" placeholder="Nuevo ítem, ej. Contar caja chica" required
+            class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+          <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+        </form>
+      </div>
+    </div>
   </div>
+  </div>
+</div>
+
+<!-- Modal de ejecución de checklist (apertura/cierre de turno) -->
+<div id="modal-checklist-run" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/40">
+  <div class="w-full max-w-sm bg-white rounded-2xl shadow-lg p-6 space-y-4 max-h-[85vh] overflow-y-auto">
+    <h2 id="checklist-run-title" class="text-xl font-headline font-extrabold text-slate-900">Checklist</h2>
+    <div id="checklist-run-items" class="space-y-2"></div>
+    <button id="btn-checklist-run-continue" class="w-full h-12 rounded-xl bg-primary text-white font-bold">Continuar</button>
   </div>
 </div>
 
@@ -849,6 +888,7 @@
 <script src="/env.js"></script>
 <script type="module" src="./js/app.js"></script>
 <script type="module" src="./js/settings.js"></script>
+<script type="module" src="./js/checklist.js"></script>
 <script type="module" src="./js/inventory.js"></script>
 <script type="module" src="./js/users.js"></script>
 <script type="module" src="./js/superadmin.js"></script>
