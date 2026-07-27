@@ -194,9 +194,17 @@ function renderOrderCard(order, isNew) {
   const btn = card.querySelector('.kds-action-btn');
   if (btn) {
     btn.addEventListener('click', async () => {
-      await updateKitchenStatus(order.order_id, btn.dataset.next);
+      const next = btn.dataset.next;
+      await updateKitchenStatus(order.order_id, next);
       await render();
-      focusOrderCard(order.order_id);
+      // "Entregado" saca el pedido de las columnas (ya no es kitchen_status
+      // neq.DELIVERED): en vez de buscar su tarjeta, se vuelve a "Nuevo"
+      // para arrancar el siguiente pedido del ciclo.
+      if (next === 'DELIVERED') {
+        document.getElementById('section-pending')?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+      } else {
+        focusOrderCard(order.order_id);
+      }
     });
   }
 
