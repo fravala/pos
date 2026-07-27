@@ -79,7 +79,7 @@ def _compute_cross_selling_combos(location_id: str, week_start: date, week_end: 
     # Con pocas canastas cualquier coincidencia parece "significativa" por puro azar de
     # muestra chica (ej. 2 de 11 órdenes ya da 18% de soporte). Se exige un mínimo de
     # canastas multi-producto antes de confiar en cualquier regla.
-    MIN_MULTI_ITEM_BASKETS = 15
+    MIN_MULTI_ITEM_BASKETS = 10
     if len(grouped) < MIN_MULTI_ITEM_BASKETS:
         return []
 
