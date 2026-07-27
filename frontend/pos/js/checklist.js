@@ -63,11 +63,13 @@ function renderChecklistSettingsList(type) {
     wrap.innerHTML = `<p class="text-sm text-slate-400">Sin ítems todavía.</p>`;
     return;
   }
+  const dayLabel = { 0: 'Dom', 1: 'Lun', 2: 'Mar', 3: 'Mié', 4: 'Jue', 5: 'Vie', 6: 'Sáb' };
   wrap.innerHTML = items[type].map((item) => `
     <div class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm" data-id="${item.id}">
       <span class="text-slate-700">
         ${item.label}
         ${item.assigned_user_id ? `<span class="text-xs text-primary font-semibold ml-1">(${usersById[item.assigned_user_id] || 'usuario'})</span>` : ''}
+        ${item.days_of_week?.length ? `<span class="text-xs text-secondary font-semibold ml-1">[${item.days_of_week.map((d) => dayLabel[d]).join(', ')}]</span>` : ''}
       </span>
       <button class="btn-checklist-delete text-slate-400 hover:text-red-500 transition-colors" data-id="${item.id}">
         <span class="material-symbols-outlined text-lg">delete</span>
@@ -82,17 +84,28 @@ function renderChecklistSettingsList(type) {
   });
 }
 
+document.querySelectorAll('.checklist-day-btn').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    btn.classList.toggle('bg-primary');
+    btn.classList.toggle('text-white');
+    btn.classList.toggle('border-primary');
+    btn.classList.toggle('text-slate-500');
+  });
+});
+
 document.querySelectorAll('.checklist-add-form').forEach((form) => {
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
     const type = form.dataset.type;
     const input = form.querySelector('.checklist-add-input');
     const assigneeSelect = form.querySelector('.checklist-add-assignee');
+    const dayBtns = [...form.querySelectorAll('.checklist-day-btn')];
     const label = input.value.trim();
     if (!label) return;
     const id = await resolveLocationId();
     const user = await getSessionValue('user');
     const sortOrder = items[type].length;
+    const selectedDays = dayBtns.filter((b) => b.classList.contains('bg-primary')).map((b) => Number(b.dataset.day));
     await supabasePost('checklist_templates', {
       tenant_id: user.tenant_id,
       location_id: id,
@@ -100,9 +113,12 @@ document.querySelectorAll('.checklist-add-form').forEach((form) => {
       label,
       sort_order: sortOrder,
       assigned_user_id: assigneeSelect.value || null,
+      days_of_week: selectedDays.length ? selectedDays : null,
     });
     input.value = '';
     assigneeSelect.value = '';
+    dayBtns.forEach((b) => b.classList.remove('bg-primary', 'text-white', 'border-primary'));
+    dayBtns.forEach((b) => b.classList.add('text-slate-500'));
     await loadChecklistSettings();
   });
 });
@@ -121,7 +137,11 @@ export async function runChecklist(type, cashSessionId = null) {
     ? items[type]
     : (await supabaseGet(`checklist_templates?location_id=eq.${id}&type=eq.${type}&active=eq.true&order=sort_order.asc`));
 
-  const templateItems = allItems.filter((item) => !item.assigned_user_id || item.assigned_user_id === user.id);
+  const today = new Date().getDay();
+  const templateItems = allItems.filter((item) =>
+    (!item.assigned_user_id || item.assigned_user_id === user.id) &&
+    (!item.days_of_week?.length || item.days_of_week.includes(today))
+  );
 
   if (!templateItems.length) return; // sin ítems configurados/asignados a este usuario: no interrumpe el flujo
 

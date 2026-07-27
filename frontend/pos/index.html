@@ -805,13 +805,25 @@
             <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Apertura</h3>
           </div>
           <div id="checklist-opening-list" class="space-y-1 mb-3"></div>
-          <form class="checklist-add-form flex gap-2" data-type="OPENING">
-            <input type="text" placeholder="Nuevo ítem, ej. Encender freidoras" required
-              class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
-            <select class="checklist-add-assignee h-11 px-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
-              <option value="">Cualquiera</option>
-            </select>
-            <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+          <form class="checklist-add-form space-y-2" data-type="OPENING">
+            <div class="flex flex-wrap gap-2">
+              <input type="text" placeholder="Nuevo ítem, ej. Encender freidoras" required
+                class="checklist-add-input flex-1 min-w-[160px] h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+              <select class="checklist-add-assignee h-11 px-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+                <option value="">Cualquiera</option>
+              </select>
+              <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+            </div>
+            <div class="checklist-add-days flex gap-1.5">
+              <button type="button" data-day="1" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">L</button>
+              <button type="button" data-day="2" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">M</button>
+              <button type="button" data-day="3" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">M</button>
+              <button type="button" data-day="4" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">J</button>
+              <button type="button" data-day="5" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">V</button>
+              <button type="button" data-day="6" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">S</button>
+              <button type="button" data-day="0" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">D</button>
+              <span class="text-xs text-slate-400 self-center ml-1">Ninguno marcado = todos los días</span>
+            </div>
           </form>
         </div>
 
@@ -820,13 +832,25 @@
             <h3 class="text-sm font-bold text-slate-500 uppercase tracking-wide">Cierre</h3>
           </div>
           <div id="checklist-closing-list" class="space-y-1 mb-3"></div>
-          <form class="checklist-add-form flex gap-2" data-type="CLOSING">
-            <input type="text" placeholder="Nuevo ítem, ej. Contar caja chica" required
-              class="checklist-add-input flex-1 h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
-            <select class="checklist-add-assignee h-11 px-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
-              <option value="">Cualquiera</option>
-            </select>
-            <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+          <form class="checklist-add-form space-y-2" data-type="CLOSING">
+            <div class="flex flex-wrap gap-2">
+              <input type="text" placeholder="Nuevo ítem, ej. Contar caja chica" required
+                class="checklist-add-input flex-1 min-w-[160px] h-11 px-3 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+              <select class="checklist-add-assignee h-11 px-2 rounded-xl border border-slate-300 focus:border-primary focus:outline-none text-sm">
+                <option value="">Cualquiera</option>
+              </select>
+              <button type="submit" class="h-11 px-4 rounded-xl bg-primary text-white font-bold text-sm">Agregar</button>
+            </div>
+            <div class="checklist-add-days flex gap-1.5">
+              <button type="button" data-day="1" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">L</button>
+              <button type="button" data-day="2" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">M</button>
+              <button type="button" data-day="3" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">M</button>
+              <button type="button" data-day="4" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">J</button>
+              <button type="button" data-day="5" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">V</button>
+              <button type="button" data-day="6" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">S</button>
+              <button type="button" data-day="0" class="checklist-day-btn w-8 h-8 rounded-lg border border-slate-300 text-xs font-bold text-slate-500">D</button>
+              <span class="text-xs text-slate-400 self-center ml-1">Ninguno marcado = todos los días</span>
+            </div>
           </form>
         </div>
       </div>
