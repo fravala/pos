@@ -147,6 +147,7 @@ function renderOrderCard(order, isNew) {
   }[level];
   const timeIcon = level === 'urgent' ? 'warning' : 'schedule';
   const card = document.createElement('article');
+  card.dataset.orderId = order.order_id;
   card.className = `rounded-xl p-5 shadow-xl transition-all border-2 ${cardTone} ${isNew ? 'ring-4 ring-secondary animate-pulse' : ''}`;
   if (isNew) setTimeout(() => card.classList.remove('ring-4', 'ring-secondary', 'animate-pulse'), 4000);
 
@@ -194,11 +195,25 @@ function renderOrderCard(order, isNew) {
   if (btn) {
     btn.addEventListener('click', async () => {
       await updateKitchenStatus(order.order_id, btn.dataset.next);
-      render();
+      await render();
+      focusOrderCard(order.order_id);
     });
   }
 
   return card;
+}
+
+// ============================================================
+// FOCO: al avanzar un pedido (Iniciar/Listo), saltar a su tarjeta en la
+// nueva columna. Cada cocinero puede tener su propio pedido "agarrado"
+// sin perderlo de vista aunque haya scrolleado a otra columna.
+// ============================================================
+function focusOrderCard(orderId) {
+  const card = document.querySelector(`[data-order-id="${orderId}"]`);
+  if (!card) return;
+  card.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+  card.classList.add('ring-4', 'ring-secondary');
+  setTimeout(() => card.classList.remove('ring-4', 'ring-secondary'), 2500);
 }
 
 function nextActionButton(order, level) {
