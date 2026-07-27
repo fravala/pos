@@ -76,29 +76,48 @@ def _compute_cross_selling_combos(location_id: str, week_start: date, week_end: 
     grouped = baskets.groupby("order_id")["product_id"].apply(list).tolist()
     grouped = [list(set(items)) for items in grouped if len(set(items)) > 1]
 
-    if len(grouped) < 3:
+    # Con pocas canastas cualquier coincidencia parece "significativa" por puro azar de
+    # muestra chica (ej. 2 de 11 órdenes ya da 18% de soporte). Se exige un mínimo de
+    # canastas multi-producto antes de confiar en cualquier regla.
+    MIN_MULTI_ITEM_BASKETS = 15
+    if len(grouped) < MIN_MULTI_ITEM_BASKETS:
         return []
 
     encoder = TransactionEncoder()
     encoded = encoder.fit(grouped).transform(grouped)
     df_encoded = pd.DataFrame(encoded, columns=encoder.columns_)
 
-    frequent = apriori(df_encoded, min_support=0.02, use_colnames=True)
+    frequent = apriori(df_encoded, min_support=0.05, use_colnames=True)
     if frequent.empty:
         return []
 
-    rules = association_rules(frequent, metric="lift", min_threshold=1.0)
-    rules = rules.sort_values("lift", ascending=False).head(20)
+    rules = association_rules(frequent, metric="lift", min_threshold=1.3)
+    # Solo pares reales "si compra A también compra B" (nada de tríos/cuartetos
+    # que solo son subconjuntos del mismo grupo de productos frecuentes).
+    rules = rules[(rules["antecedents"].apply(len) == 1) & (rules["consequents"].apply(len) == 1)]
+    # Exige un mínimo de co-ocurrencias absolutas, no solo un % sobre pocas canastas.
+    min_occurrences = max(5, round(len(grouped) * 0.08))
+    rules = rules[(rules["support"] * len(grouped)).round().astype(int) >= min_occurrences]
+    rules = rules[rules["confidence"] >= 0.4]
 
-    combos = []
+    # Dedupe: A->B y B->A son la misma pareja: se queda la de mayor confianza.
+    seen = {}
     for _, rule in rules.iterrows():
-        combos.append({
+        pair = frozenset(list(rule["antecedents"]) + list(rule["consequents"]))
+        if pair not in seen or rule["confidence"] > seen[pair]["confidence"]:
+            seen[pair] = rule
+
+    combos = sorted(seen.values(), key=lambda r: r["lift"], reverse=True)[:10]
+
+    return [
+        {
             "items": list(rule["antecedents"]) + list(rule["consequents"]),
             "support": float(rule["support"]),
             "confidence": float(rule["confidence"]),
             "lift": float(rule["lift"]),
-        })
-    return combos
+        }
+        for rule in combos
+    ]
 
 
 def run_weekly_analytics(location_id: str | None = None):
