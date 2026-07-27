@@ -1558,7 +1558,7 @@ function renderInsights(analytics) {
   const classTone = { A: 'bg-success/10 text-success', B: 'bg-warning/10 text-warning', C: 'bg-red-50 text-red-500' };
 
   if (!abcMatrix.length) {
-    abcWrap.innerHTML = `<div class="text-center text-slate-400 py-6">Sin ventas suficientes la semana pasada para calcular la matriz.</div>`;
+    abcWrap.innerHTML = `<div class="text-center text-slate-400 py-6">Sin ventas suficientes en los últimos 7 días para calcular la matriz.</div>`;
   } else {
     abcMatrix
       .slice()
@@ -1578,7 +1578,7 @@ function renderInsights(analytics) {
   }
 
   if (!combos.length) {
-    comboWrap.innerHTML = `<div class="text-center text-slate-400 py-6">Sin combos frecuentes detectados la semana pasada.</div>`;
+    comboWrap.innerHTML = `<div class="text-center text-slate-400 py-6">Sin combos frecuentes todavía (se necesitan más tickets con 2 o más productos).</div>`;
   } else {
     combos.forEach((combo) => {
       const names = combo.items.map((id) => products.find((p) => p.id === id)?.name || 'Producto').join(' + ');
