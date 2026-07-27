@@ -247,9 +247,34 @@ async function loadCatalog() {
     recipes = await getAll('recipes_bom');
     supplies = await getAll('inventory_catalog');
   }
+  await sortProductsByBestSellers();
   await loadLowStockWarnings();
   renderCategories();
   renderProductGrid(products);
+}
+
+// ============================================================
+// ORDENAR CATÁLOGO POR MÁS VENDIDOS (últimos 30 días)
+// ============================================================
+async function sortProductsByBestSellers() {
+  if (!isOnline() || !session.user.location_id) return;
+  try {
+    const since = new Date();
+    since.setDate(since.getDate() - 30);
+    const orders = await supabaseGet(
+      `orders?location_id=eq.${session.user.location_id}&status=eq.PAID&created_at=gte.${since.toISOString()}&select=id`
+    );
+    if (!orders.length) return;
+
+    const orderIds = orders.map((o) => o.id);
+    const items = await supabaseGet(`order_items?order_id=in.(${orderIds.join(',')})&select=product_id,quantity`);
+    const qtyByProduct = {};
+    items.forEach((i) => { qtyByProduct[i.product_id] = (qtyByProduct[i.product_id] || 0) + Number(i.quantity); });
+
+    products.sort((a, b) => (qtyByProduct[b.id] || 0) - (qtyByProduct[a.id] || 0));
+  } catch {
+    // sin conexión o error: se queda con el orden original, no bloquea el catálogo
+  }
 }
 
 async function loadLowStockWarnings() {
