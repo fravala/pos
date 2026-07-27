@@ -16,10 +16,6 @@ from db import fetch_df, execute
 logger = logging.getLogger("analytics")
 
 
-def _week_start(d: date) -> date:
-    return d - timedelta(days=d.weekday())
-
-
 def _compute_abc_matrix(location_id: str, week_start: date, week_end: date) -> list[dict]:
     sales = fetch_df(
         """
@@ -106,10 +102,11 @@ def _compute_cross_selling_combos(location_id: str, week_start: date, week_end: 
 
 
 def run_weekly_analytics(location_id: str | None = None):
-    """Genera Matriz ABC + combos de cross-selling para la semana pasada."""
+    """Genera Matriz ABC + combos de cross-selling de los últimos 7 días (ventana rodante,
+    no semana calendario) para que siempre refleje las ventas más recientes disponibles."""
     today = date.today()
-    week_end = _week_start(today)          # inicio de semana actual = fin de la semana pasada
-    week_start = week_end - timedelta(days=7)
+    week_end = today + timedelta(days=1)   # incluye las ventas de hoy
+    week_start = today - timedelta(days=6)
 
     locations_query = "select id, tenant_id from locations"
     params = ()

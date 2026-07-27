@@ -1550,7 +1550,7 @@ function renderInsights(analytics) {
   const combos = analytics?.cross_selling_combos || [];
 
   if (!analytics) {
-    abcWrap.innerHTML = `<div class="text-center text-slate-400 py-10">Sin datos todavía. Usa "Actualizar insights" para generarlos.</div>`;
+    abcWrap.innerHTML = `<div class="text-center text-slate-400 py-10">Sin datos todavía. Usa "Actualizar análisis" para generarlos.</div>`;
     comboWrap.innerHTML = '';
     return;
   }
@@ -1605,9 +1605,9 @@ el('btn-update-insights')?.addEventListener('click', async () => {
     });
     if (!res.ok) throw new Error('Error del servicio ML');
     await loadInsights();
-    label.textContent = 'Actualizar insights';
+    label.textContent = 'Actualizar análisis';
   } catch (e) {
-    label.textContent = 'Actualizar insights';
+    label.textContent = 'Actualizar análisis';
     alert('No se pudo conectar con el servicio de predicción (ml-service). ¿Está corriendo?');
   } finally {
     btn.disabled = false;
