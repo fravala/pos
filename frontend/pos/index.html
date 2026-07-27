@@ -723,6 +723,17 @@
         <div data-settings-panel="sucursal" class="bg-white rounded-2xl shadow-sm p-6 space-y-6">
           <h2 class="text-xl font-bold">Información de la sucursal</h2>
 
+          <div class="bg-secondary/10 border border-secondary/20 rounded-xl p-4">
+            <p class="text-sm font-bold text-slate-800 mb-1">Catálogo para pedidos a domicilio</p>
+            <p class="text-xs text-slate-500 mb-3">Compartí este link con tus clientes para que vean el menú y pidan por WhatsApp.</p>
+            <div class="flex flex-wrap gap-2">
+              <input id="settings-catalog-link" type="text" readonly
+                class="flex-1 min-w-[200px] h-11 px-3 rounded-xl border border-slate-300 bg-white text-sm text-slate-600">
+              <button type="button" id="btn-copy-catalog-link" class="h-11 px-4 rounded-xl bg-secondary text-white font-bold text-sm">Copiar link</button>
+              <a id="btn-open-catalog-link" href="#" target="_blank" class="h-11 px-4 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-sm flex items-center hover:bg-slate-50">Ver catálogo</a>
+            </div>
+          </div>
+
           <div class="grid sm:grid-cols-2 gap-4">
             <label class="block">
               <span class="text-sm font-semibold text-slate-500">Logo (URL)</span>

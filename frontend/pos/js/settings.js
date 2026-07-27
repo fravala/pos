@@ -76,6 +76,11 @@ export async function loadSettingsView() {
   el('settings-kds-enabled').checked = currentLocation.settings?.kds_enabled ?? true;
   el('settings-show-images').checked = currentLocation.settings?.show_product_images ?? true;
 
+  const catalogBase = window.__ENV__?.CATALOG_URL || 'http://localhost:8080';
+  const catalogLink = `${catalogBase}/?location=${currentLocation.id}`;
+  el('settings-catalog-link').value = catalogLink;
+  el('btn-open-catalog-link').href = catalogLink;
+
   const social = currentLocation.settings?.social || {};
   el('settings-social-facebook').value = social.facebook || '';
   el('settings-social-instagram').value = social.instagram || '';
@@ -137,4 +142,17 @@ document.querySelectorAll('.settings-nav-btn').forEach((btn) => {
     el('form-settings').querySelector('[data-settings-submit-wrap]')
       .classList.toggle('hidden', !SETTINGS_FORM_SECTIONS.includes(section));
   });
+});
+
+// ============================================================
+// CATÁLOGO PÚBLICO — copiar link para compartir con clientes
+// ============================================================
+el('btn-copy-catalog-link')?.addEventListener('click', async () => {
+  const link = el('settings-catalog-link').value;
+  if (!link) return;
+  await navigator.clipboard.writeText(link);
+  const btn = el('btn-copy-catalog-link');
+  const original = btn.textContent;
+  btn.textContent = '¡Copiado!';
+  setTimeout(() => { btn.textContent = original; }, 1500);
 });
