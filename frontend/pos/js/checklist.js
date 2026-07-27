@@ -2,10 +2,22 @@
 import { getSessionValue } from './db.js';
 import { supabaseGet, supabasePost, supabaseDelete } from './api.js';
 
+const PHP_API_BASE = window.__ENV__?.PHP_API_BASE || 'http://localhost:8000/api';
+
 function el(id) { return document.getElementById(id); }
+
+async function phpGet(endpoint) {
+  const token = await getSessionValue('jwt');
+  const res = await fetch(`${PHP_API_BASE}/${endpoint}`, {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+  if (!res.ok) throw new Error((await res.json()).error || 'Error de red');
+  return res.json();
+}
 
 let locationId = null;
 let items = { OPENING: [], CLOSING: [] };
+let usersById = {};
 
 async function resolveLocationId() {
   if (locationId) return locationId;
@@ -17,12 +29,26 @@ async function resolveLocationId() {
   return locationId;
 }
 
+async function loadUsersForAssignment() {
+  try {
+    const rows = await phpGet('users_manage.php?action=list');
+    usersById = Object.fromEntries(rows.map((u) => [u.id, u.username]));
+    const options = '<option value="">Cualquiera</option>' +
+      rows.map((u) => `<option value="${u.id}">${u.username}</option>`).join('');
+    document.querySelectorAll('.checklist-add-assignee').forEach((sel) => { sel.innerHTML = options; });
+  } catch {
+    // sin permisos o error de red: se queda con "Cualquiera" únicamente
+  }
+}
+
 // ============================================================
 // CONFIGURACIÓN — CRUD de ítems por sucursal
 // ============================================================
 export async function loadChecklistSettings() {
   const id = await resolveLocationId();
   if (!id) return;
+
+  await loadUsersForAssignment();
 
   const rows = await supabaseGet(`checklist_templates?location_id=eq.${id}&active=eq.true&order=sort_order.asc`);
   items.OPENING = rows.filter((r) => r.type === 'OPENING');
@@ -39,7 +65,10 @@ function renderChecklistSettingsList(type) {
   }
   wrap.innerHTML = items[type].map((item) => `
     <div class="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm" data-id="${item.id}">
-      <span class="text-slate-700">${item.label}</span>
+      <span class="text-slate-700">
+        ${item.label}
+        ${item.assigned_user_id ? `<span class="text-xs text-primary font-semibold ml-1">(${usersById[item.assigned_user_id] || 'usuario'})</span>` : ''}
+      </span>
       <button class="btn-checklist-delete text-slate-400 hover:text-red-500 transition-colors" data-id="${item.id}">
         <span class="material-symbols-outlined text-lg">delete</span>
       </button>
@@ -58,6 +87,7 @@ document.querySelectorAll('.checklist-add-form').forEach((form) => {
     e.preventDefault();
     const type = form.dataset.type;
     const input = form.querySelector('.checklist-add-input');
+    const assigneeSelect = form.querySelector('.checklist-add-assignee');
     const label = input.value.trim();
     if (!label) return;
     const id = await resolveLocationId();
@@ -69,25 +99,31 @@ document.querySelectorAll('.checklist-add-form').forEach((form) => {
       type,
       label,
       sort_order: sortOrder,
+      assigned_user_id: assigneeSelect.value || null,
     });
     input.value = '';
+    assigneeSelect.value = '';
     await loadChecklistSettings();
   });
 });
 
 // ============================================================
 // EJECUCIÓN — se muestra al abrir turno / hacer Corte Z
+// Solo se muestran ítems sin asignar ("Cualquiera") o asignados al usuario
+// que tiene la sesión abierta en este momento.
 // ============================================================
 export async function runChecklist(type, cashSessionId = null) {
   const id = await resolveLocationId();
   const user = await getSessionValue('user');
   if (!id) return;
 
-  const templateItems = items[type]?.length
+  const allItems = items[type]?.length
     ? items[type]
     : (await supabaseGet(`checklist_templates?location_id=eq.${id}&type=eq.${type}&active=eq.true&order=sort_order.asc`));
 
-  if (!templateItems.length) return; // sin ítems configurados: no interrumpe el flujo
+  const templateItems = allItems.filter((item) => !item.assigned_user_id || item.assigned_user_id === user.id);
+
+  if (!templateItems.length) return; // sin ítems configurados/asignados a este usuario: no interrumpe el flujo
 
   const checked = await new Promise((resolve) => {
     el('checklist-run-title').textContent = type === 'OPENING' ? 'Checklist de apertura' : 'Checklist de cierre';
