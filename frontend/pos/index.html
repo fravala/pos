@@ -240,9 +240,9 @@
     </button>
   </nav>
 
-  <div id="view-caja" class="flex-1 flex flex-col sm:flex-row overflow-hidden">
-    <!-- Mobile: toggle Productos/Ticket (en sm+ se ven ambos lado a lado, esto se oculta) -->
-    <div class="sm:hidden flex shrink-0 border-b border-slate-200 bg-white">
+  <div id="view-caja" class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    <!-- Mobile/landscape: toggle Productos/Ticket (en lg+ se ven ambos lado a lado, esto se oculta) -->
+    <div class="lg:hidden flex shrink-0 border-b border-slate-200 bg-white">
       <button id="caja-mobile-tab-products" class="flex-1 py-3 text-sm font-bold text-primary border-b-2 border-primary">Productos</button>
       <button id="caja-mobile-tab-ticket" class="flex-1 py-3 text-sm font-bold text-slate-400 flex items-center justify-center gap-1.5">
         Ticket
@@ -251,13 +251,13 @@
     </div>
 
     <!-- LEFT: product grid 70% -->
-    <main id="view-pos" class="flex-1 min-h-0 flex flex-col overflow-hidden sm:flex-none sm:basis-[70%] bg-[#F7F8FA]">
+    <main id="view-pos" class="flex-1 min-h-0 flex flex-col overflow-hidden lg:flex-none lg:basis-[70%] bg-[#F7F8FA]">
       <div class="px-6 pt-4 pb-2 shrink-0 flex gap-3 overflow-x-auto hide-scrollbar" id="category-tabs"></div>
-      <div id="product-grid" class="flex-1 overflow-y-auto px-6 pb-6 grid grid-cols-2 sm:[grid-template-columns:repeat(auto-fill,minmax(180px,1fr))] gap-3 sm:gap-6 content-start"></div>
+      <div id="product-grid" class="flex-1 overflow-y-auto px-6 pb-6 grid grid-cols-2 lg:[grid-template-columns:repeat(auto-fill,minmax(180px,1fr))] gap-3 lg:gap-6 content-start"></div>
     </main>
 
     <!-- RIGHT: ticket 30% -->
-    <aside id="ticket-panel" class="hidden sm:flex flex-1 min-h-0 bg-white border-t sm:border-t-0 sm:border-l border-slate-200 flex-col w-full sm:basis-[30%] sm:min-w-[320px] shadow-2xl">
+    <aside id="ticket-panel" class="hidden lg:flex flex-1 min-h-0 bg-white border-t lg:border-t-0 lg:border-l border-slate-200 flex-col w-full lg:basis-[30%] lg:min-w-[320px] shadow-2xl">
       <div class="p-6 shrink-0 border-b border-gray-100">
         <div class="flex justify-between items-center">
           <h2 class="text-xl font-headline font-extrabold text-slate-900">Ticket</h2>
