@@ -452,7 +452,33 @@ function updateTicketTotals() {
 
   el('ticket-total').textContent = money(ticketTotal());
   el('btn-charge').disabled = ticket.length === 0 || !cashSessionId;
+
+  const totalQty = ticket.reduce((sum, i) => sum + i.quantity, 0);
+  const badge = el('caja-mobile-ticket-badge');
+  badge.textContent = totalQty;
+  badge.classList.toggle('hidden', totalQty === 0);
+  badge.classList.toggle('flex', totalQty > 0);
 }
+
+// ============================================================
+// MOBILE: toggle entre Productos y Ticket (en sm+ se ven ambos siempre)
+// ============================================================
+function showMobileCajaTab(tab) {
+  el('view-pos').classList.toggle('hidden', tab !== 'products');
+  el('ticket-panel').classList.toggle('hidden', tab !== 'ticket');
+  el('ticket-panel').classList.toggle('flex', tab === 'ticket');
+  el('caja-mobile-tab-products').classList.toggle('text-primary', tab === 'products');
+  el('caja-mobile-tab-products').classList.toggle('border-b-2', tab === 'products');
+  el('caja-mobile-tab-products').classList.toggle('border-primary', tab === 'products');
+  el('caja-mobile-tab-products').classList.toggle('text-slate-400', tab !== 'products');
+  el('caja-mobile-tab-ticket').classList.toggle('text-primary', tab === 'ticket');
+  el('caja-mobile-tab-ticket').classList.toggle('border-b-2', tab === 'ticket');
+  el('caja-mobile-tab-ticket').classList.toggle('border-primary', tab === 'ticket');
+  el('caja-mobile-tab-ticket').classList.toggle('text-slate-400', tab !== 'ticket');
+}
+
+el('caja-mobile-tab-products').addEventListener('click', () => showMobileCajaTab('products'));
+el('caja-mobile-tab-ticket').addEventListener('click', () => showMobileCajaTab('ticket'));
 
 el('btn-clear-ticket').addEventListener('click', () => {
   ticket = [];
