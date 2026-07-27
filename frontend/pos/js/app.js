@@ -4,7 +4,7 @@ import { openModifiers } from './modifiers.js';
 import { loadSettingsView } from './settings.js';
 import { loadUsersView } from './users.js';
 import { loadInventoryView } from './inventory.js';
-import { loadChecklistSettings, runChecklist } from './checklist.js';
+import { loadChecklistSettings, runChecklist, maybeShowOpeningChecklistOnLogin, updateClosingChecklistIndicator } from './checklist.js';
 import { enterSuperAdmin } from './superadmin.js';
 
 let session = null; // { token, user }
@@ -103,6 +103,11 @@ async function enterApp() {
   showScreen('app');
   await loadCatalog();
   renderTicket();
+
+  if (isOnline() && session.user.location_id) {
+    await maybeShowOpeningChecklistOnLogin();
+    await updateClosingChecklistIndicator();
+  }
 
   // El puntero local (IndexedDB) se pierde al cerrar sesión o cambiar de dispositivo,
   // pero la caja real puede seguir abierta en la base. Si no hay puntero local,
@@ -553,7 +558,7 @@ el('btn-split-bill').addEventListener('click', () => {
 el('btn-open-session').addEventListener('click', async () => {
   const opening = parseFloat(el('opening-balance').value);
   if (isNaN(opening) || opening < 0) return toast('Fondo inicial inválido');
-  await runChecklist('OPENING');
+  await maybeShowOpeningChecklistOnLogin();
   try {
     const result = await phpPost('cash_session.php?action=open', { opening_balance: opening });
     cashSessionId = result.id;
@@ -577,6 +582,10 @@ el('btn-open-session-inline')?.addEventListener('click', () => {
 el('btn-cancel-open-session')?.addEventListener('click', () => {
   el('screen-open-session').classList.add('hidden');
   el('screen-open-session').classList.remove('flex');
+});
+
+el('btn-closing-checklist')?.addEventListener('click', async () => {
+  await runChecklist('CLOSING', cashSessionId);
 });
 
 el('btn-close-session').addEventListener('click', async () => {

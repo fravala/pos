@@ -124,10 +124,28 @@ document.querySelectorAll('.checklist-add-form').forEach((form) => {
 });
 
 // ============================================================
-// EJECUCIÓN — se muestra al abrir turno / hacer Corte Z
+// EJECUCIÓN — checklist de apertura aparece solo al iniciar sesión (mientras
+// falten tareas del día); el de cierre se abre bajo demanda con su botón.
 // Solo se muestran ítems sin asignar ("Cualquiera") o asignados al usuario
-// que tiene la sesión abierta en este momento.
+// que tiene la sesión abierta en este momento, y que apliquen hoy.
 // ============================================================
+async function getTodayRun(type) {
+  const id = await resolveLocationId();
+  if (!id) return null;
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const rows = await supabaseGet(
+    `checklist_runs?location_id=eq.${id}&type=eq.${type}&created_at=gte.${startOfDay.toISOString()}&order=created_at.desc&limit=1&select=*`
+  );
+  return rows[0] || null;
+}
+
+/** true si ya se completaron (marcaron todos) los ítems de hoy para este tipo. */
+async function isChecklistDoneToday(type) {
+  const run = await getTodayRun(type);
+  return !!run?.all_checked;
+}
+
 export async function runChecklist(type, cashSessionId = null) {
   const id = await resolveLocationId();
   const user = await getSessionValue('user');
@@ -145,11 +163,16 @@ export async function runChecklist(type, cashSessionId = null) {
 
   if (!templateItems.length) return; // sin ítems configurados/asignados a este usuario: no interrumpe el flujo
 
+  // Progreso ya marcado hoy (en un login/visita anterior) se precarga, así
+  // no hay que volver a marcar lo que ya se hizo.
+  const previousRun = await getTodayRun(type);
+  const previousChecked = new Set((previousRun?.items || []).filter((r) => r.checked).map((r) => r.label));
+
   const checked = await new Promise((resolve) => {
     el('checklist-run-title').textContent = type === 'OPENING' ? 'Checklist de apertura' : 'Checklist de cierre';
     el('checklist-run-items').innerHTML = templateItems.map((item, i) => `
       <label class="flex items-center gap-3 bg-slate-50 rounded-lg px-3 py-2.5">
-        <input type="checkbox" class="checklist-run-checkbox w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary" data-index="${i}">
+        <input type="checkbox" class="checklist-run-checkbox w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary" data-index="${i}" ${previousChecked.has(item.label) ? 'checked' : ''}>
         <span class="text-sm text-slate-700">${item.label}</span>
       </label>`).join('');
 
@@ -183,4 +206,22 @@ export async function runChecklist(type, cashSessionId = null) {
   } catch {
     // si falla el registro de auditoría no se bloquea el flujo de apertura/cierre
   }
+
+  if (type === 'CLOSING') await updateClosingChecklistIndicator();
+}
+
+/** Se llama al iniciar sesión: si el checklist de apertura de hoy no está
+ * completo, lo muestra. Sigue apareciendo en cada login hasta que se
+ * marquen todos los ítems (o no haya ítems que apliquen). */
+export async function maybeShowOpeningChecklistOnLogin() {
+  if (await isChecklistDoneToday('OPENING')) return;
+  await runChecklist('OPENING');
+}
+
+/** Punto (badge) en el botón de checklist de cierre mientras falte completarlo hoy. */
+export async function updateClosingChecklistIndicator() {
+  const dot = el('closing-checklist-pending-dot');
+  if (!dot) return;
+  const done = await isChecklistDoneToday('CLOSING');
+  dot.classList.toggle('hidden', done);
 }
