@@ -13,6 +13,7 @@ let cashOpeningBalance = 0;
 let cashAlertThreshold = null;
 let autoPrintReceipt = true;
 let kdsEnabled = true;
+let showProductImages = true;
 let products = [];
 let recipes = [];
 let supplies = [];
@@ -142,7 +143,9 @@ async function enterApp() {
         cashAlertThreshold = loc?.settings?.cash_alert_threshold ?? null;
         autoPrintReceipt = loc?.settings?.auto_print_receipt ?? true;
         kdsEnabled = loc?.settings?.kds_enabled ?? true;
+        showProductImages = loc?.settings?.show_product_images ?? true;
         applyKdsVisibility();
+        applyProductFilters();
       }
     } catch {
       cashAlertThreshold = null;
@@ -300,12 +303,14 @@ function renderProductGrid(list) {
     }`;
     card.innerHTML = `
       ${lowStock ? `<span title="Insumo con stock bajo" class="absolute top-1.5 right-1.5 z-10 w-6 h-6 rounded-full bg-amber-100 text-amber-600 flex items-center justify-center"><span class="material-symbols-outlined text-sm">warning</span></span>` : ''}
+      ${showProductImages ? `
       <div class="aspect-square rounded-lg overflow-hidden bg-slate-100 mb-3">
         ${p.image_url ? `<img src="${p.image_url}" class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">` : ''}
       </div>
-      <h3 class="font-headline font-bold text-slate-800 text-sm leading-tight mb-1">${p.name}</h3>
+      <h3 class="font-headline font-bold text-slate-800 text-sm leading-tight mb-1">${p.name}</h3>` : `
+      <h3 class="font-headline font-bold text-slate-800 text-lg leading-tight mb-3">${p.name}</h3>`}
       <div class="flex justify-between items-center">
-        <span class="text-primary font-black">${money(p.base_price)}</span>
+        <span class="text-primary font-black ${showProductImages ? '' : 'text-xl'}">${money(p.base_price)}</span>
         <div class="btn-add w-8 h-8 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 group-hover:bg-secondary group-hover:text-white transition-colors">
           <span class="material-symbols-outlined text-sm">add</span>
         </div>

@@ -243,7 +243,7 @@
   <div id="view-caja" class="flex-1 flex flex-col sm:flex-row overflow-y-auto sm:overflow-hidden">
     <!-- LEFT: product grid 70% -->
     <main id="view-pos" class="flex flex-col overflow-hidden sm:basis-[70%] bg-[#F7F8FA]">
-      <div class="px-6 pt-4 pb-2 shrink-0 flex gap-3 overflow-x-auto hide-scrollbar" id="category-tabs"></div>
+      <div class="px-6 pt-4 pb-2 shrink-0 flex flex-wrap gap-3" id="category-tabs"></div>
       <div id="product-grid" class="sm:flex-1 sm:overflow-y-auto px-6 pb-6 grid gap-6 content-start" style="grid-template-columns: repeat(auto-fill, minmax(180px, 1fr))"></div>
     </main>
 
@@ -770,6 +770,12 @@
             <span class="text-sm font-semibold text-slate-600">Usar Cocina (KDS)</span>
           </label>
           <p class="text-xs text-slate-400 -mt-3">Apágalo si tu negocio no prepara pedidos en cocina (ej. solo vendes productos ya empacados). Las ventas se marcarán como entregadas directo, sin pasar por Pendiente/En preparación.</p>
+
+          <label class="flex items-center gap-2">
+            <input id="settings-show-images" type="checkbox" checked class="w-5 h-5 rounded border-slate-300 text-primary focus:ring-primary">
+            <span class="text-sm font-semibold text-slate-600">Mostrar imágenes de producto en el POS</span>
+          </label>
+          <p class="text-xs text-slate-400 -mt-3">Apágalo para que las tarjetas de producto muestren solo nombre y precio en texto grande, sin foto.</p>
         </div>
 
         <div data-settings-submit-wrap>

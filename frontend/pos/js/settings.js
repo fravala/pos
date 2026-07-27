@@ -74,6 +74,7 @@ export async function loadSettingsView() {
   el('settings-cash-alert').value = currentLocation.settings?.cash_alert_threshold ?? '';
   el('settings-auto-print').checked = currentLocation.settings?.auto_print_receipt ?? true;
   el('settings-kds-enabled').checked = currentLocation.settings?.kds_enabled ?? true;
+  el('settings-show-images').checked = currentLocation.settings?.show_product_images ?? true;
 
   const social = currentLocation.settings?.social || {};
   el('settings-social-facebook').value = social.facebook || '';
@@ -102,6 +103,7 @@ el('form-settings')?.addEventListener('submit', async (e) => {
       cash_alert_threshold: el('settings-cash-alert').value ? parseFloat(el('settings-cash-alert').value) : null,
       auto_print_receipt: el('settings-auto-print').checked,
       kds_enabled: el('settings-kds-enabled').checked,
+      show_product_images: el('settings-show-images').checked,
     },
   };
 
