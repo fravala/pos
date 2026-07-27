@@ -115,6 +115,8 @@ function switchTab(tab) {
   el('btn-new-product').classList.toggle('flex', tab === 'products');
   el('btn-import-csv').classList.toggle('hidden', tab !== 'products');
   el('btn-import-csv').classList.toggle('flex', tab === 'products');
+  el('btn-deactivate-all-products').classList.toggle('hidden', tab !== 'products');
+  el('btn-deactivate-all-products').classList.toggle('flex', tab === 'products');
   el('btn-new-supply').classList.toggle('hidden', tab !== 'supplies');
   el('btn-new-supply').classList.toggle('flex', tab === 'supplies');
   el('btn-new-vendor').classList.toggle('hidden', tab !== 'vendors');
@@ -749,6 +751,24 @@ async function deleteProduct(product) {
   }
   await loadInventoryView();
 }
+
+el('btn-deactivate-all-products')?.addEventListener('click', async () => {
+  const active = products.filter((p) => p.active);
+  if (!active.length) return alert('No hay productos activos.');
+  if (!confirm(`¿Desactivar los ${active.length} productos activos? Se ocultan del POS y el Catálogo, pero las ventas ya registradas NO se borran. Podrás cargar el catálogo nuevo después.`)) return;
+
+  const btn = el('btn-deactivate-all-products');
+  btn.disabled = true;
+  try {
+    for (const p of active) {
+      await supabasePatch(`products?id=eq.${p.id}`, { active: false });
+    }
+    alert(`${active.length} productos desactivados.`);
+    await loadInventoryView();
+  } finally {
+    btn.disabled = false;
+  }
+});
 
 // ============================================================
 // INSUMOS (inventory_catalog + inventory_stock)
