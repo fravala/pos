@@ -96,7 +96,7 @@ def _compute_cross_selling_combos(location_id: str, week_start: date, week_end: 
     # que solo son subconjuntos del mismo grupo de productos frecuentes).
     rules = rules[(rules["antecedents"].apply(len) == 1) & (rules["consequents"].apply(len) == 1)]
     # Exige un mínimo de co-ocurrencias absolutas, no solo un % sobre pocas canastas.
-    min_occurrences = max(5, round(len(grouped) * 0.08))
+    min_occurrences = max(3, round(len(grouped) * 0.08))
     rules = rules[(rules["support"] * len(grouped)).round().astype(int) >= min_occurrences]
     rules = rules[rules["confidence"] >= 0.4]
 
