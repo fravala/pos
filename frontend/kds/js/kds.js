@@ -1,4 +1,5 @@
 // KDS — modo oscuro estricto. Polling (sin libs externas) contra vista_kds_order_items.
+import { maybeShowOpeningChecklistOnLogin, updateClosingChecklistIndicator, runChecklist } from './checklist.js';
 const SUPABASE_URL = window.__ENV__?.SUPABASE_URL || '';
 const SUPABASE_ANON_KEY = window.__ENV__?.SUPABASE_ANON_KEY || '';
 const PHP_API_BASE = window.__ENV__?.PHP_API_BASE || 'http://localhost:8000';
@@ -42,7 +43,10 @@ document.getElementById('form-login').addEventListener('submit', async (e) => {
       throw new Error('Este usuario no tiene acceso a cocina');
     }
     localStorage.setItem('kds_jwt', data.token);
+    localStorage.setItem('kds_user', JSON.stringify(data.user));
     showKds();
+    await maybeShowOpeningChecklistOnLogin();
+    await updateClosingChecklistIndicator();
   } catch (err) {
     errorEl.textContent = err.message || 'Error al iniciar sesión';
     errorEl.classList.remove('hidden');
@@ -303,7 +307,12 @@ async function updateAvgPrepTime() {
 document.getElementById('btn-refresh').addEventListener('click', () => { render(); updateAvgPrepTime(); });
 document.getElementById('btn-kds-logout').addEventListener('click', () => {
   localStorage.removeItem('kds_jwt');
+  localStorage.removeItem('kds_user');
   location.reload();
+});
+
+document.getElementById('btn-closing-checklist').addEventListener('click', async () => {
+  await runChecklist('CLOSING');
 });
 
 let pollingStarted = false;
@@ -321,6 +330,8 @@ setInterval(tickClock, 1000);
 
 if (getToken()) {
   showKds();
+  maybeShowOpeningChecklistOnLogin();
+  updateClosingChecklistIndicator();
 } else {
   showLogin();
 }

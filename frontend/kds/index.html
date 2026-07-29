@@ -65,6 +65,11 @@
       <span class="material-symbols-outlined">refresh</span>
       Actualizar
     </button>
+    <button id="btn-closing-checklist" class="relative p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm font-semibold">
+      <span class="material-symbols-outlined">checklist</span>
+      Cierre
+      <span id="closing-checklist-pending-dot" class="hidden absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full bg-amber-500"></span>
+    </button>
     <button id="btn-kds-logout" class="p-2 rounded-lg text-zinc-400 hover:bg-zinc-800 transition-colors flex items-center gap-2 text-sm font-semibold">
       <span class="material-symbols-outlined">logout</span>
       Salir
@@ -106,6 +111,15 @@
     </section>
   </div>
 </main>
+</div>
+
+<!-- Modal de ejecución de checklist (apertura/cierre de turno) -->
+<div id="modal-checklist-run" class="fixed inset-0 z-50 hidden items-center justify-center bg-black/60">
+  <div class="w-full max-w-md bg-[#18181b] border border-zinc-800 rounded-2xl shadow-lg p-6 space-y-4">
+    <h2 id="checklist-run-title" class="text-xl font-headline font-extrabold text-zinc-100">Checklist</h2>
+    <div id="checklist-run-items" class="space-y-2"></div>
+    <button id="btn-checklist-run-continue" class="w-full h-12 rounded-xl bg-primary text-white font-bold">Continuar</button>
+  </div>
 </div>
 
 <script type="module" src="./js/kds.js"></script>
