@@ -48,20 +48,47 @@ async function resolveLocationId() {
   return locationId;
 }
 
-async function getTodayRun(type) {
+async function getTodayRuns(type) {
   const id = await resolveLocationId();
-  if (!id) return null;
+  if (!id) return [];
   const startOfDay = new Date();
   startOfDay.setHours(0, 0, 0, 0);
-  const rows = await supabaseGet(
-    `checklist_runs?location_id=eq.${id}&type=eq.${type}&created_at=gte.${startOfDay.toISOString()}&order=created_at.desc&limit=1&select=*`
+  return supabaseGet(
+    `checklist_runs?location_id=eq.${id}&type=eq.${type}&created_at=gte.${startOfDay.toISOString()}&order=created_at.asc&select=*`
   );
-  return rows[0] || null;
 }
 
-async function isChecklistDoneToday(type) {
-  const run = await getTodayRun(type);
-  return !!run?.all_checked;
+/** Fusiona los ítems marcados de todos los runs de hoy (cada login/visita crea
+ * un run con solo los ítems del usuario que lo hizo). Runs más recientes
+ * pisan a los anteriores si repiten el mismo label. */
+function mergeCheckedLabels(runs) {
+  const map = new Map();
+  for (const run of runs) {
+    for (const r of run.items || []) map.set(r.label, r.checked);
+  }
+  return map;
+}
+
+async function getApplicableItems(type, user) {
+  const id = await resolveLocationId();
+  if (!id) return [];
+  const allItems = items[type]?.length
+    ? items[type]
+    : (await supabaseGet(`checklist_templates?location_id=eq.${id}&type=eq.${type}&active=eq.true&order=sort_order.asc`));
+  items[type] = allItems;
+  const today = new Date().getDay();
+  return allItems.filter((item) =>
+    (!item.assigned_user_id || item.assigned_user_id === user.id) &&
+    (!item.days_of_week?.length || item.days_of_week.includes(today))
+  );
+}
+
+/** true si ESTE usuario ya marcó todos sus ítems aplicables de hoy para este tipo. */
+async function isChecklistDoneToday(type, user) {
+  const templateItems = await getApplicableItems(type, user);
+  if (!templateItems.length) return true;
+  const checkedMap = mergeCheckedLabels(await getTodayRuns(type));
+  return templateItems.every((item) => checkedMap.get(item.label) === true);
 }
 
 export async function runChecklist(type) {
@@ -69,27 +96,16 @@ export async function runChecklist(type) {
   const user = getUser();
   if (!id || !user) return;
 
-  const allItems = items[type]?.length
-    ? items[type]
-    : (await supabaseGet(`checklist_templates?location_id=eq.${id}&type=eq.${type}&active=eq.true&order=sort_order.asc`));
-  items[type] = allItems;
-
-  const today = new Date().getDay();
-  const templateItems = allItems.filter((item) =>
-    (!item.assigned_user_id || item.assigned_user_id === user.id) &&
-    (!item.days_of_week?.length || item.days_of_week.includes(today))
-  );
-
+  const templateItems = await getApplicableItems(type, user);
   if (!templateItems.length) return;
 
-  const previousRun = await getTodayRun(type);
-  const previousChecked = new Set((previousRun?.items || []).filter((r) => r.checked).map((r) => r.label));
+  const checkedMap = mergeCheckedLabels(await getTodayRuns(type));
 
   const checked = await new Promise((resolve) => {
     el('checklist-run-title').textContent = type === 'OPENING' ? 'Checklist de apertura' : 'Checklist de cierre';
     el('checklist-run-items').innerHTML = templateItems.map((item, i) => `
       <label class="flex items-center gap-3 bg-zinc-800 rounded-lg px-3 py-2.5">
-        <input type="checkbox" class="checklist-run-checkbox w-5 h-5 rounded border-zinc-600 text-primary focus:ring-primary" data-index="${i}" ${previousChecked.has(item.label) ? 'checked' : ''}>
+        <input type="checkbox" class="checklist-run-checkbox w-5 h-5 rounded border-zinc-600 text-primary focus:ring-primary" data-index="${i}" ${checkedMap.get(item.label) === true ? 'checked' : ''}>
         <span class="text-sm text-zinc-200">${item.label}</span>
       </label>`).join('');
 
@@ -128,13 +144,15 @@ export async function runChecklist(type) {
 }
 
 export async function maybeShowOpeningChecklistOnLogin() {
-  if (await isChecklistDoneToday('OPENING')) return;
+  const user = getUser();
+  if (!user || await isChecklistDoneToday('OPENING', user)) return;
   await runChecklist('OPENING');
 }
 
 export async function updateClosingChecklistIndicator() {
   const dot = el('closing-checklist-pending-dot');
   if (!dot) return;
-  const done = await isChecklistDoneToday('CLOSING');
+  const user = getUser();
+  const done = !user || await isChecklistDoneToday('CLOSING', user);
   dot.classList.toggle('hidden', done);
 }
