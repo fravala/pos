@@ -69,16 +69,18 @@ document.addEventListener('click', () => {
 
 function playNewOrderBeep() {
   if (!audioCtx) return;
-  [0, 0.18].forEach((delay) => {
+  // 3 beeps más largos, volumen casi al máximo y onda 'square' (más penetrante que 'sine')
+  // para que se escuche fuerte en un ambiente de cocina ruidoso.
+  [0, 0.28, 0.56].forEach((delay) => {
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
-    osc.type = 'sine';
-    osc.frequency.value = 880;
-    gain.gain.setValueAtTime(0.3, audioCtx.currentTime + delay);
-    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.15);
+    osc.type = 'square';
+    osc.frequency.value = 1046.5; // Do6, más agudo y penetrante que el 880Hz anterior
+    gain.gain.setValueAtTime(0.9, audioCtx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + delay + 0.24);
     osc.connect(gain).connect(audioCtx.destination);
     osc.start(audioCtx.currentTime + delay);
-    osc.stop(audioCtx.currentTime + delay + 0.16);
+    osc.stop(audioCtx.currentTime + delay + 0.25);
   });
 }
 

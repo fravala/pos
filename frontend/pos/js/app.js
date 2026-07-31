@@ -533,8 +533,19 @@ el('btn-discount-close')?.addEventListener('click', () => {
 });
 
 document.querySelectorAll('.btn-discount-pct').forEach((btn) => {
-  btn.addEventListener('click', () => {
+  btn.addEventListener('click', async () => {
     const pct = Number(btn.dataset.pct);
+    const pin = prompt(`Descuento del ${pct}% — requiere PIN de un administrador para autorizar:`);
+    if (pin === null) return;
+    if (!pin.trim()) return toast('PIN requerido');
+
+    try {
+      const result = await phpPost('users_manage.php?action=verify_manager_pin', { pin: pin.trim() });
+      if (!result.valid) return toast('PIN incorrecto');
+    } catch (err) {
+      return toast(err.message || 'Error verificando el PIN');
+    }
+
     discountAmount = ticketSubtotal() * (pct / 100);
     updateTicketTotals();
     el('modal-discount').classList.add('hidden');

@@ -6,15 +6,20 @@ require __DIR__ . '/bootstrap.php';
 use Lib\Auth;
 use Lib\Database;
 
+$action = $_GET['action'] ?? '';
+
+// "verify_manager_pin" lo usa el cajero al aplicar un descuento — no requiere rol admin,
+// solo estar autenticado. El resto de acciones sí son exclusivas de ADMIN/SUPERADMIN.
 try {
     $claims = Auth::requireAuth();
-    Auth::requireRole($claims, ['SUPERADMIN', 'ADMIN']);
+    if ($action !== 'verify_manager_pin') {
+        Auth::requireRole($claims, ['SUPERADMIN', 'ADMIN']);
+    }
 } catch (\RuntimeException $e) {
     json_error($e->getMessage(), $e->getCode() === 403 ? 403 : 401);
 }
 
 $pdo = Database::connection();
-$action = $_GET['action'] ?? '';
 $isSuperadmin = ($claims['user_role'] ?? null) === 'SUPERADMIN';
 
 // --- Listar usuarios del propio tenant ---
@@ -139,4 +144,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'verify_pin') {
     exit;
 }
 
-json_error('Acción inválida. Usa ?action=list|update_role|toggle_status|reset_password|set_pin|verify_pin', 400);
+// --- Verificar PIN de CUALQUIER admin/gerente del tenant (autorización de descuento en caja) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'verify_manager_pin') {
+    $input = json_input();
+    $pin = (string)($input['pin'] ?? '');
+
+    $stmt = $pdo->prepare(
+        "select username, pin_hash from users
+         where tenant_id = :tenant_id and role in ('ADMIN', 'SUPERADMIN') and pin_hash is not null"
+    );
+    $stmt->execute(['tenant_id' => $claims['tenant_id']]);
+
+    foreach ($stmt->fetchAll() as $row) {
+        if (password_verify($pin, $row['pin_hash'])) {
+            echo json_encode(['valid' => true, 'authorized_by' => $row['username']]);
+            exit;
+        }
+    }
+    echo json_encode(['valid' => false]);
+    exit;
+}
+
+json_error('Acción inválida. Usa ?action=list|update_role|toggle_status|reset_password|set_pin|verify_pin|verify_manager_pin', 400);
