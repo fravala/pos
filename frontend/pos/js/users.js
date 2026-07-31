@@ -74,6 +74,10 @@ function renderUsersList(users) {
         ${u.role === 'SUPERADMIN' ? `<option value="SUPERADMIN" selected>Superadmin</option>` : ''}
       </select>
       <div class="flex items-center gap-1 shrink-0">
+        ${isSelf && (u.role === 'ADMIN' || u.role === 'SUPERADMIN') ? `
+        <button class="btn-set-pin p-2 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-primary transition-colors" title="Configurar PIN de confirmación">
+          <span class="material-symbols-outlined text-lg">password</span>
+        </button>` : ''}
         <button class="btn-reset-password p-2 rounded-lg text-slate-400 hover:bg-slate-200 hover:text-primary transition-colors" title="Restablecer contraseña">
           <span class="material-symbols-outlined text-lg">lock_reset</span>
         </button>
@@ -91,6 +95,18 @@ function renderUsersList(users) {
       } catch (err) {
         alert(err.message || 'Error al cambiar el rol');
         roleSelect.value = u.role;
+      }
+    });
+
+    row.querySelector('.btn-set-pin')?.addEventListener('click', async () => {
+      const pin = prompt('Nuevo PIN de confirmación (4 a 6 dígitos). Se pedirá para modificar órdenes ya cobradas.');
+      if (pin === null) return;
+      if (!/^\d{4,6}$/.test(pin)) return alert('El PIN debe ser numérico, de 4 a 6 dígitos');
+      try {
+        await phpPost('users_manage.php?action=set_pin', { pin });
+        alert('PIN configurado');
+      } catch (err) {
+        alert(err.message || 'Error al configurar el PIN');
       }
     });
 

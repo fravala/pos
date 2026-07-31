@@ -109,4 +109,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'reset_password') {
     exit;
 }
 
-json_error('Acción inválida. Usa ?action=list|update_role|toggle_status|reset_password', 400);
+// --- Configurar PIN propio de confirmación (para modificar órdenes cobradas) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'set_pin') {
+    $input = json_input();
+    $pin = (string)($input['pin'] ?? '');
+
+    if (!preg_match('/^\d{4,6}$/', $pin)) {
+        json_error('El PIN debe ser numérico de 4 a 6 dígitos', 422);
+    }
+
+    $stmt = $pdo->prepare('update users set pin_hash = :pin_hash where id = :id returning id');
+    $stmt->execute(['pin_hash' => password_hash($pin, PASSWORD_BCRYPT), 'id' => $claims['sub']]);
+    if (!$stmt->fetch()) json_error('Usuario no encontrado', 404);
+    echo json_encode(['ok' => true]);
+    exit;
+}
+
+// --- Verificar PIN propio (confirmación para modificar orden cobrada) ---
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $action === 'verify_pin') {
+    $input = json_input();
+    $pin = (string)($input['pin'] ?? '');
+
+    $stmt = $pdo->prepare('select pin_hash from users where id = :id');
+    $stmt->execute(['id' => $claims['sub']]);
+    $row = $stmt->fetch();
+
+    $valid = $row && $row['pin_hash'] && password_verify($pin, $row['pin_hash']);
+    echo json_encode(['valid' => (bool)$valid, 'pin_configured' => (bool)($row && $row['pin_hash'])]);
+    exit;
+}
+
+json_error('Acción inválida. Usa ?action=list|update_role|toggle_status|reset_password|set_pin|verify_pin', 400);

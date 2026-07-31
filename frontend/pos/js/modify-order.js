@@ -56,6 +56,16 @@ async function openModifyOrders() {
 
 async function pickOrder(orderId) {
   if (!confirm('Esta orden ya fue cobrada. ¿Seguro que quieres modificarla? Esto puede ajustar el corte de caja.')) return;
+  closeModal('modal-modify-orders');
+  await editOrderById(orderId);
+}
+
+// Abre el editor de una orden directamente, sin pasar por la lista de últimas 7 ventas.
+// Usado desde el historial completo de órdenes (Ver detalle -> Modificar orden), donde
+// la confirmación ya se hizo vía PIN en vez de un confirm() genérico.
+export async function editOrderById(orderId) {
+  if (!currentUser) currentUser = await getSessionValue('user');
+  if (!currentUser || (currentUser.role !== 'ADMIN' && currentUser.role !== 'SUPERADMIN')) return;
 
   const [order] = await supabaseGet(`orders?id=eq.${orderId}&select=id,total,payment_method,cash_session_id,discount_amount`);
   const items = await supabaseGet(`order_items?order_id=eq.${orderId}&select=product_id,quantity,unit_price,products(name)`);
@@ -71,7 +81,6 @@ async function pickOrder(orderId) {
   el('edit-order-add-product').innerHTML = `<option value="">Seleccionar...</option>` +
     products.map((p) => `<option value="${p.id}">${p.name} — ${money(p.base_price)}</option>`).join('');
 
-  closeModal('modal-modify-orders');
   openModal('modal-edit-order');
   renderEditItems();
 }

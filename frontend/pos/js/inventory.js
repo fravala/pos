@@ -1,6 +1,7 @@
 // Panel ADMIN — CRUD de productos, insumos (inventory_catalog) y escandallo (recipes_bom)
 import { getSessionValue } from './db.js';
-import { supabaseGet, supabasePost, supabasePatch, supabaseDelete } from './api.js';
+import { supabaseGet, supabasePost, supabasePatch, supabaseDelete, phpPost } from './api.js';
+import { editOrderById } from './modify-order.js';
 
 function el(id) { return document.getElementById(id); }
 const money = (n) => `$${Number(n).toFixed(2)}`;
@@ -11,6 +12,7 @@ const dateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2
 
 let tenantId = null;
 let locationId = null;
+let currentUser = null;
 let products = [];
 let supplies = [];
 let vendors = [];
@@ -19,6 +21,7 @@ let recipesByProductId = {};
 let allRecipes = [];
 let productCostById = {};
 let purchasesByCatalogId = {};
+let categories = [];
 
 // ============================================================
 // BOOTSTRAP + TABS
@@ -26,6 +29,7 @@ let purchasesByCatalogId = {};
 export async function loadInventoryView() {
   const user = await getSessionValue('user');
   if (!user) return;
+  currentUser = user;
   tenantId = user.tenant_id;
   locationId = user.location_id
     ? user.location_id
@@ -33,6 +37,7 @@ export async function loadInventoryView() {
 
   await loadVendors();
   await loadSupplies();
+  await loadCategories();
 
   products = await supabaseGet(`products?tenant_id=eq.${tenantId}&order=name.asc&select=*`);
   await loadProductCostData();
@@ -331,11 +336,38 @@ async function openOrderDetail(orderId) {
           <span class="font-bold text-slate-600">x${r.quantity}</span>
         </div>`).join('')
     : `<p class="text-sm text-slate-400">Sin ítems.</p>`;
+
+  const order = orderHistory.find((o) => o.id === orderId);
+  const isAdmin = currentUser && (currentUser.role === 'ADMIN' || currentUser.role === 'SUPERADMIN');
+  const btn = el('btn-order-detail-modify');
+  if (btn) {
+    btn.classList.toggle('hidden', !(isAdmin && order?.status === 'PAID'));
+    btn.dataset.id = orderId;
+  }
 }
 
 el('btn-order-detail-close')?.addEventListener('click', () => {
   el('modal-order-detail').classList.add('hidden');
   el('modal-order-detail').classList.remove('flex');
+});
+
+el('btn-order-detail-modify')?.addEventListener('click', async (e) => {
+  const orderId = e.currentTarget.dataset.id;
+  const pin = prompt('Ingresa tu PIN de confirmación para modificar esta orden ya cobrada:');
+  if (pin === null) return;
+  if (!pin.trim()) return alert('PIN requerido');
+
+  try {
+    const result = await phpPost('users_manage.php?action=verify_pin', { pin: pin.trim() });
+    if (!result.pin_configured) return alert('No tienes un PIN configurado. Ve a Usuarios y configúralo primero.');
+    if (!result.valid) return alert('PIN incorrecto');
+  } catch (err) {
+    return alert(err.message || 'Error verificando el PIN');
+  }
+
+  el('modal-order-detail').classList.add('hidden');
+  el('modal-order-detail').classList.remove('flex');
+  await editOrderById(orderId);
 });
 
 async function loadPrepTimeChart(weekAgo, dayKeys, dayLabels) {
@@ -528,11 +560,35 @@ function renderCostBadge(product, trend) {
     </div>`;
 }
 
+// ============================================================
+// CATEGORÍAS DE PRODUCTOS
+// ============================================================
+async function loadCategories() {
+  categories = await supabaseGet(`categories?tenant_id=eq.${tenantId}&order=sort_order.asc,name.asc&select=id,name`);
+}
+
+function renderCategoryOptions(selected) {
+  el('product-category').innerHTML = `<option value="">Sin categoría</option>` +
+    categories.map((c) => `<option value="${c.name}" ${c.name === selected ? 'selected' : ''}>${c.name}</option>`).join('');
+}
+
+el('btn-new-category')?.addEventListener('click', async () => {
+  const name = prompt('Nombre de la nueva categoría:');
+  if (!name || !name.trim()) return;
+  try {
+    const [created] = await supabasePost('categories', { tenant_id: tenantId, name: name.trim() });
+    await loadCategories();
+    renderCategoryOptions(created.name);
+  } catch (err) {
+    alert(err.message?.includes('duplicate') ? 'Esa categoría ya existe' : (err.message || 'Error al crear categoría'));
+  }
+});
+
 function openProductModal(product = null) {
   el('product-modal-title').textContent = product ? 'Editar producto' : 'Nuevo producto';
   el('product-id').value = product?.id || '';
   el('product-name').value = product?.name || '';
-  el('product-category').value = product?.category || '';
+  renderCategoryOptions(product?.category || '');
   el('product-price').value = product?.base_price ?? '';
   el('product-image').value = product?.image_url || '';
   el('product-description').value = product?.description || '';
