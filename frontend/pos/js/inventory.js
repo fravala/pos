@@ -5,6 +5,9 @@ import { supabaseGet, supabasePost, supabasePatch, supabaseDelete } from './api.
 function el(id) { return document.getElementById(id); }
 const money = (n) => `$${Number(n).toFixed(2)}`;
 const price = money;
+// Fecha en zona horaria local (no UTC) — created_at es timestamptz, .toISOString()/.slice(0,10)
+// desplaza ventas de la tarde/noche al día UTC siguiente y las pierde del bucket.
+const dateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 
 let tenantId = null;
 let locationId = null;
@@ -140,7 +143,7 @@ async function loadDashboard() {
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   if (el('report-date') && !el('report-date').value) {
-    el('report-date').value = today.toISOString().slice(0, 10);
+    el('report-date').value = dateKey(today);
   }
   const weekAgo = new Date(today);
   weekAgo.setDate(weekAgo.getDate() - 6); // hoy + 6 días atrás = 7 días
@@ -154,7 +157,7 @@ async function loadDashboard() {
   for (let i = 6; i >= 0; i--) {
     const d = new Date(today);
     d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
+    const key = dateKey(d);
     dayKeys.push(key);
     dayTotals[key] = 0;
   }
@@ -165,7 +168,7 @@ async function loadDashboard() {
   let weekCount = 0;
 
   orders.forEach((o) => {
-    const key = o.created_at.slice(0, 10);
+    const key = dateKey(new Date(o.created_at));
     if (key in dayTotals) dayTotals[key] += Number(o.total);
     weekTotal += Number(o.total);
     weekCount += 1;
@@ -345,7 +348,7 @@ async function loadPrepTimeChart(weekAgo, dayKeys, dayLabels) {
   dayKeys.forEach((k) => { dayPrepSum[k] = 0; dayPrepCount[k] = 0; });
 
   orders.forEach((o) => {
-    const key = o.created_at.slice(0, 10);
+    const key = dateKey(new Date(o.created_at));
     if (!(key in dayPrepSum)) return;
     const mins = (new Date(o.ready_at) - new Date(o.created_at)) / 60000;
     dayPrepSum[key] += mins;

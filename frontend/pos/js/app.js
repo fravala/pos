@@ -522,21 +522,25 @@ el('btn-remove-discount').addEventListener('click', () => {
 });
 
 el('btn-discount').addEventListener('click', () => {
-  const subtotal = ticketSubtotal();
-  if (subtotal <= 0) return toast('Agrega productos primero');
+  if (ticketSubtotal() <= 0) return toast('Agrega productos primero');
+  el('modal-discount').classList.remove('hidden');
+  el('modal-discount').classList.add('flex');
+});
 
-  const choice = prompt('Tipo de descuento: escribe "%" para porcentaje o "$" para monto fijo', '%');
-  if (choice === null) return;
+el('btn-discount-close')?.addEventListener('click', () => {
+  el('modal-discount').classList.add('hidden');
+  el('modal-discount').classList.remove('flex');
+});
 
-  const isPercent = choice.trim().startsWith('%');
-  const valueStr = prompt(isPercent ? '¿Qué porcentaje de descuento?' : '¿Cuánto descuento en pesos?');
-  if (valueStr === null) return;
-  const value = parseFloat(valueStr);
-  if (isNaN(value) || value < 0) return toast('Valor inválido');
-
-  discountAmount = isPercent ? subtotal * (Math.min(value, 100) / 100) : value;
-  updateTicketTotals();
-  toast('Descuento aplicado');
+document.querySelectorAll('.btn-discount-pct').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const pct = Number(btn.dataset.pct);
+    discountAmount = ticketSubtotal() * (pct / 100);
+    updateTicketTotals();
+    el('modal-discount').classList.add('hidden');
+    el('modal-discount').classList.remove('flex');
+    toast(`Descuento del ${pct}% aplicado`);
+  });
 });
 
 el('btn-split-bill').addEventListener('click', () => {
@@ -653,10 +657,14 @@ document.querySelectorAll('.payment-method-btn').forEach((btn) => {
 });
 
 el('btn-confirm-payment').addEventListener('click', async () => {
+  if (el('btn-confirm-payment').disabled) return;
+  el('btn-confirm-payment').disabled = true;
+
   const total = ticketTotal();
   const cashTendered = selectedPaymentMethod === 'CASH' ? Number(el('cash-tendered').value) || 0 : null;
   const cashChange = cashTendered !== null ? Math.max(cashTendered - total, 0) : null;
   const orderPayload = {
+    client_order_id: crypto.randomUUID(),
     location_id: session.user.location_id,
     tenant_id: session.user.tenant_id,
     cash_session_id: cashSessionId,
@@ -685,6 +693,8 @@ el('btn-confirm-payment').addEventListener('click', async () => {
   } catch {
     await enqueueSync(orderPayload);
     toast('Error de red: venta guardada localmente');
+  } finally {
+    el('btn-confirm-payment').disabled = false;
   }
 
   if (autoPrintReceipt) printSaleReceipt(ticket, total, selectedPaymentMethod, cashTendered, cashChange, dailyNumber);
@@ -761,7 +771,18 @@ function printSaleReceipt(items, total, paymentMethod, cashTendered, cashChange,
 }
 
 async function submitOrder(payload) {
+  // Idempotencia: si esta orden ya fue creada (retry de la cola offline o doble submit),
+  // no volver a insertarla — reusar la existente.
+  if (payload.client_order_id) {
+    const existing = await supabaseGet(`orders?client_order_id=eq.${payload.client_order_id}&select=id`);
+    if (existing.length) {
+      const rows = await supabaseGet(`view_kds_order_items?order_id=eq.${existing[0].id}&select=daily_number&limit=1`);
+      return rows[0]?.daily_number ?? null;
+    }
+  }
+
   const order = await supabasePost('orders', {
+    client_order_id: payload.client_order_id || null,
     tenant_id: payload.tenant_id,
     location_id: payload.location_id,
     cash_session_id: payload.cash_session_id,
