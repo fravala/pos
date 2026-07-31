@@ -584,6 +584,53 @@ el('btn-new-category')?.addEventListener('click', async () => {
   }
 });
 
+el('btn-manage-categories')?.addEventListener('click', () => {
+  renderManageCategories();
+  el('modal-manage-categories').classList.remove('hidden');
+  el('modal-manage-categories').classList.add('flex');
+});
+
+el('btn-manage-categories-close')?.addEventListener('click', () => {
+  el('modal-manage-categories').classList.add('hidden');
+  el('modal-manage-categories').classList.remove('flex');
+});
+
+function renderManageCategories() {
+  el('manage-categories-list').innerHTML = categories.length ? categories.map((c) => {
+    const count = products.filter((p) => p.category === c.name).length;
+    return `
+      <div class="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3">
+        <div>
+          <span class="font-bold text-slate-700">${c.name}</span>
+          <span class="block text-xs text-slate-400">${count} producto${count === 1 ? '' : 's'}</span>
+        </div>
+        <button class="btn-delete-category text-red-400 hover:text-red-600 p-2" data-id="${c.id}" data-name="${c.name}" data-count="${count}" title="Eliminar">
+          <span class="material-symbols-outlined text-lg">delete</span>
+        </button>
+      </div>`;
+  }).join('') : `<p class="text-sm text-slate-400">Sin categorías todavía.</p>`;
+
+  document.querySelectorAll('.btn-delete-category').forEach((btn) => {
+    btn.addEventListener('click', () => deleteCategory(btn.dataset.id, btn.dataset.name, Number(btn.dataset.count)));
+  });
+}
+
+async function deleteCategory(id, name, count) {
+  if (count > 0) {
+    const names = products.filter((p) => p.category === name).map((p) => p.name).slice(0, 10).join(', ');
+    alert(`No puedes eliminar "${name}": ${count} producto${count === 1 ? '' : 's'} la usa${count === 1 ? '' : 'n'} (${names}${count > 10 ? '...' : ''}). Reasígnalos a otra categoría primero.`);
+    return;
+  }
+  if (!confirm(`¿Eliminar la categoría "${name}"?`)) return;
+  try {
+    await supabaseDelete(`categories?id=eq.${id}`);
+    await loadCategories();
+    renderManageCategories();
+  } catch (err) {
+    alert(err.message || 'Error al eliminar categoría');
+  }
+}
+
 function openProductModal(product = null) {
   el('product-modal-title').textContent = product ? 'Editar producto' : 'Nuevo producto';
   el('product-id').value = product?.id || '';
